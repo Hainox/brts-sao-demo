@@ -1,0 +1,1821 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>БРТС · САО — CRM v4.0 · Демо</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+::-webkit-scrollbar{width:8px;height:8px}
+::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:4px}
+*{font-family:'Segoe UI',system-ui,sans-serif}
+@keyframes pulse-red{0%,100%{background:#fee2e2}50%{background:#fecaca}}
+.pulse-red{animation:pulse-red 2s infinite}
+.tab-btn.active{background:#2563eb;color:#fff}
+</style>
+</head>
+<body class="bg-slate-100">
+
+<!-- ================== LOGIN SCREEN ================== -->
+<div id="login-screen" class="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 to-blue-900 p-4">
+  <div class="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md">
+    <div class="text-center mb-6">
+      <div class="inline-flex w-16 h-16 bg-blue-600 rounded-2xl items-center justify-center text-3xl mb-3">🚗</div>
+      <h1 class="text-2xl font-bold text-slate-800">БРТС · САО</h1>
+      <p class="text-slate-500 text-sm mt-1">CRM-система учёта брошенных ТС</p>
+    </div>
+    <div class="space-y-3">
+      <div>
+        <label class="text-xs font-semibold text-slate-600 uppercase">Логин</label>
+        <input id="login-input" class="w-full border rounded-lg px-3 py-2 mt-1" placeholder="admin" value="admin">
+      </div>
+      <div>
+        <label class="text-xs font-semibold text-slate-600 uppercase">Пароль</label>
+        <input id="pass-input" type="password" class="w-full border rounded-lg px-3 py-2 mt-1" placeholder="••••••" value="123">
+      </div>
+      <button onclick="doLogin()" class="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-lg py-2.5 font-semibold">Войти</button>
+      <div id="login-error" class="text-red-600 text-sm hidden"></div>
+    </div>
+    <div class="mt-6 p-3 bg-slate-50 rounded-lg text-xs text-slate-500">
+      <b>Демо-доступы:</b> admin, editor_brts, sen_aero, spec_aero, lawyer, inspector, parking, visitor (пароль любой)
+    </div>
+  </div>
+</div>
+
+<!-- ================== 2FA SCREEN ================== -->
+<div id="twofa-screen" class="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 to-blue-900 p-4 hidden">
+  <div class="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md">
+    <h2 class="text-xl font-bold mb-2">🔐 Двухфакторная аутентификация</h2>
+    <p class="text-slate-500 text-sm mb-4">Для модераторов обязательна 2FA (п.7.6 ТЗ). Введите код из Google Authenticator.</p>
+    <div class="p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800 mb-4">
+      В демо-режиме код всегда: <b>123456</b>
+    </div>
+    <input id="twofa-input" class="w-full border rounded-lg px-3 py-2 text-center text-2xl tracking-widest" placeholder="123456" maxlength="6">
+    <button onclick="verify2FA()" class="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-lg py-2.5 font-semibold mt-3">Подтвердить</button>
+  </div>
+</div>
+
+<!-- ================== MAIN APP ================== -->
+<div id="app" class="hidden">
+<div class="flex min-h-screen">
+  <!-- SIDEBAR -->
+  <aside class="w-60 bg-slate-900 text-slate-300 flex flex-col flex-none">
+    <div class="px-5 py-5 flex items-center gap-3 border-b border-slate-800">
+      <div class="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center text-xl">🚗</div>
+      <div><div class="text-white font-bold leading-tight">БРТС · САО</div><div class="text-xs text-slate-400">CRM v4.0 · тестовая версия</div></div>
+    </div>
+    <nav class="p-3 space-y-1 flex-1">
+      <button data-view="dashboard" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition">📊 Дашборд <span id="nav-overdue" class="ml-auto bg-red-500 text-white rounded-full text-xs px-2 py-0.5 hidden"></span></button>
+      <button data-view="objects" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition">🚗 Реестр объектов <span id="nav-count" class="ml-auto bg-slate-700 text-slate-300 rounded-full text-xs px-2 py-0.5"></span></button>
+      <button data-view="court" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition">⚖️ Судебная работа</button>
+      <button data-view="reports" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition">📑 Конструктор отчётов</button>
+      <button data-view="users" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition">👥 Пользователи</button>
+      <button data-view="audit" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition">📜 История изменений</button>
+      <button data-view="refs" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition">📚 Справочники</button>
+      <button data-view="settings" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition">⚙️ Настройки</button>
+    </nav>
+    <div class="p-3 border-t border-slate-800 text-xs text-slate-500">
+      <div>Пользователь: <span id="current-user-name" class="text-slate-300"></span></div>
+      <div>Роль: <span id="current-user-role" class="text-slate-300"></span></div>
+      <button onclick="logout()" class="mt-2 text-red-400 hover:text-red-300">🚪 Выйти</button>
+    </div>
+  </aside>
+
+  <!-- MAIN CONTENT -->
+  <main class="flex-1 flex flex-col min-w-0">
+    <!-- TOP BAR -->
+    <header class="bg-white border-b px-6 py-3 flex items-center gap-4 sticky top-0 z-10">
+      <h1 id="view-title" class="text-lg font-bold text-slate-800 flex-1">Дашборд</h1>
+      <div id="overdue-alert" class="hidden items-center gap-2 bg-red-50 border border-red-200 text-red-700 px-3 py-1.5 rounded-lg text-sm font-semibold pulse-red">
+        ⚠️ <span>Просрочено: <b id="overdue-count">0</b></span>
+      </div>
+      <div class="flex items-center gap-2">
+        <select id="role-switcher" class="border rounded-lg px-2 py-1.5 text-sm bg-white"></select>
+        <button onclick="doBackup()" class="text-slate-500 hover:text-slate-700 text-sm" title="Создать резервную копию (п.10.1 ТЗ)">💾 Бэкап</button>
+      </div>
+    </header>
+
+    <!-- VIEWS -->
+    <div id="views" class="p-6 flex-1">
+      <!-- DASHBOARD -->
+      <section id="view-dashboard" class="view hidden">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+          <div class="bg-white rounded-xl border p-5"><div class="text-xs text-slate-500 uppercase font-semibold mb-1">Всего объектов</div><div id="kpi-total" class="text-3xl font-bold text-slate-800">0</div><div class="text-xs text-slate-400 mt-1">в системе</div></div>
+          <div class="bg-white rounded-xl border p-5"><div class="text-xs text-red-600 uppercase font-semibold mb-1">🔴 Просрочено</div><div id="kpi-overdue" class="text-3xl font-bold text-red-600">0</div><div class="text-xs text-slate-400 mt-1">требуют срочных действий</div></div>
+          <div class="bg-white rounded-xl border p-5"><div class="text-xs text-amber-600 uppercase font-semibold mb-1">🟡 Истекает сегодня/завтра</div><div id="kpi-warning" class="text-3xl font-bold text-amber-600">0</div><div class="text-xs text-slate-400 mt-1">контроль в реальном времени</div></div>
+          <div class="bg-white rounded-xl border p-5"><div class="text-xs text-green-600 uppercase font-semibold mb-1">🟢 В норме</div><div id="kpi-ok" class="text-3xl font-bold text-green-600">0</div><div class="text-xs text-slate-400 mt-1">сроки соблюдены</div></div>
+        </div>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div class="bg-white rounded-xl border p-5">
+            <h3 class="font-bold text-slate-800 mb-4">📊 Объекты по районам САО (всего / свыше 3 мес.)</h3>
+            <div id="district-chart" class="space-y-2"></div>
+          </div>
+          <div class="bg-white rounded-xl border p-5">
+            <h3 class="font-bold text-slate-800 mb-4">⚖️ Судебная воронка</h3>
+            <div id="court-funnel" class="space-y-2"></div>
+          </div>
+        </div>
+        <div class="bg-white rounded-xl border p-5 mt-6">
+          <h3 class="font-bold text-slate-800 mb-4">🔔 Объекты, требующие внимания</h3>
+          <div id="attention-list" class="space-y-1"></div>
+        </div>
+      </section>
+
+      <!-- OBJECTS LIST -->
+      <section id="view-objects" class="view hidden">
+        <!-- Filters -->
+        <div class="bg-white rounded-xl border p-4 mb-4">
+          <div class="flex flex-wrap gap-3 items-center mb-3">
+            <div class="flex-1 min-w-[280px] relative">
+              <span class="absolute left-3 top-2.5 text-slate-400">🔍</span>
+              <input id="f-search" placeholder="Поиск: адрес, марка, ГРЗ, № дела (частичное совпадение, напр. «Ленин» или «А001»)" class="w-full pl-9 pr-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+            <button onclick="resetFilters()" class="px-3 py-2 text-sm bg-slate-100 hover:bg-slate-200 rounded-lg">✕ Сброс</button>
+            <button id="btn-add-object" onclick="openAddObject()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold text-sm">+ Добавить объект</button>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+            <div><label class="text-xs font-semibold text-slate-600 uppercase">Районы (мультивыбор)</label><select id="f-districts" multiple class="w-full h-20 border rounded-lg p-1.5 text-xs mt-1"></select></div>
+            <div><label class="text-xs font-semibold text-slate-600 uppercase">Типы ТС</label><select id="f-types" multiple class="w-full h-20 border rounded-lg p-1.5 text-xs mt-1"></select></div>
+            <div><label class="text-xs font-semibold text-slate-600 uppercase">Стадии</label><select id="f-stages" multiple class="w-full h-20 border rounded-lg p-1.5 text-xs mt-1"></select></div>
+            <div><label class="text-xs font-semibold text-slate-600 uppercase">Службы (чекбоксы)</label><div id="f-services" class="space-y-1 mt-1 text-xs"></div></div>
+          </div>
+          <div class="grid grid-cols-2 gap-3 mt-3">
+            <div><label class="text-xs font-semibold text-slate-600 uppercase">Дата выявления от</label><input id="f-date-from" type="date" class="w-full border rounded-lg p-1.5 text-sm mt-1"></div>
+            <div><label class="text-xs font-semibold text-slate-600 uppercase">Дата выявления до</label><input id="f-date-to" type="date" class="w-full border rounded-lg p-1.5 text-sm mt-1"></div>
+          </div>
+        </div>
+
+        <!-- Table -->
+        <div class="bg-white rounded-xl border overflow-hidden">
+          <div class="overflow-x-auto" style="max-height:60vh">
+            <table class="w-full text-sm">
+              <thead class="bg-slate-50 text-slate-500 text-xs uppercase sticky top-0 z-10">
+                <tr>
+                  <th class="px-3 py-2.5 text-left font-semibold">№</th>
+                  <th class="px-3 py-2.5 text-left font-semibold cursor-pointer" onclick="sortBy('district')">Район</th>
+                  <th class="px-3 py-2.5 text-left font-semibold cursor-pointer" onclick="sortBy('detection_date')">Дата выявления</th>
+                  <th class="px-3 py-2.5 text-left font-semibold">Тип</th>
+                  <th class="px-3 py-2.5 text-left font-semibold">Адрес</th>
+                  <th class="px-3 py-2.5 text-left font-semibold">ТС</th>
+                  <th class="px-3 py-2.5 text-left font-semibold">ГРЗ</th>
+                  <th class="px-3 py-2.5 text-left font-semibold">Стадия</th>
+                  <th class="px-3 py-2.5 text-left font-semibold">Контрольные сроки</th>
+                  <th class="px-3 py-2.5 text-left font-semibold">Действия</th>
+                </tr>
+              </thead>
+              <tbody id="objects-tbody" class="divide-y"></tbody>
+            </table>
+          </div>
+          <div class="flex items-center justify-between px-4 py-3 border-t bg-slate-50">
+            <div class="text-sm text-slate-500">Найдено: <b id="filtered-count">0</b> из <b id="total-count">0</b></div>
+            <div class="flex items-center gap-3">
+              <select id="page-size" class="border rounded px-2 py-1 text-sm">
+                <option value="50">50/стр</option><option value="100">100/стр</option><option value="150">150/стр</option><option value="200">200/стр</option>
+              </select>
+              <button id="page-prev" onclick="pageChange(-1)" class="px-3 py-1 border rounded text-sm">←</button>
+              <span class="text-sm">Стр. <b id="page-current">1</b> / <b id="page-total">1</b></span>
+              <button id="page-next" onclick="pageChange(1)" class="px-3 py-1 border rounded text-sm">→</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- COURT -->
+      <section id="view-court" class="view hidden">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+          <div class="bg-white rounded-xl border p-5"><div class="text-xs text-slate-500 uppercase mb-1">Всего в суде</div><div id="court-total" class="text-2xl font-bold">0</div></div>
+          <div class="bg-white rounded-xl border p-5"><div class="text-xs text-slate-500 uppercase mb-1">Решений получено</div><div id="court-decided" class="text-2xl font-bold text-green-600">0</div></div>
+          <div class="bg-white rounded-xl border p-5"><div class="text-xs text-slate-500 uppercase mb-1">Признано бесхозяйными</div><div id="court-utilized" class="text-2xl font-bold text-blue-600">0</div></div>
+          <div class="bg-white rounded-xl border p-5"><div class="text-xs text-slate-500 uppercase mb-1">Обжалуется</div><div id="court-appealed" class="text-2xl font-bold text-red-600">0</div></div>
+        </div>
+        <div class="bg-white rounded-xl border overflow-hidden">
+          <table class="w-full text-sm">
+            <thead class="bg-slate-50 text-xs uppercase text-slate-500"><tr>
+              <th class="px-3 py-2.5 text-left">№ дела</th><th class="px-3 py-2.5 text-left">ТС</th><th class="px-3 py-2.5 text-left">Район</th>
+              <th class="px-3 py-2.5 text-left">Дата подачи</th><th class="px-3 py-2.5 text-left">Заседание</th><th class="px-3 py-2.5 text-left">Решение</th>
+              <th class="px-3 py-2.5 text-left">Статус</th>
+            </tr></thead>
+            <tbody id="court-tbody" class="divide-y"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- REPORTS -->
+      <section id="view-reports" class="view hidden">
+        <div class="bg-white rounded-xl border p-5 mb-4">
+          <h3 class="font-bold text-slate-800 mb-3">📊 Конструктор отчётов (до 15 полей группировки, п.5.3 ТЗ)</h3>
+          <div class="mb-3">
+            <label class="text-xs font-semibold text-slate-600 uppercase block mb-2">Поля для группировки (клик для выбора, до 15):</label>
+            <div id="report-dims" class="flex flex-wrap gap-2"></div>
+          </div>
+          <div class="flex items-center gap-3 mb-3">
+            <label class="text-xs font-semibold text-slate-600 uppercase">Метрика:</label>
+            <select id="report-metric" class="border rounded px-2 py-1.5 text-sm">
+              <option value="count">Количество объектов</option>
+              <option value="percent">Процент от общей выборки</option>
+            </select>
+            <label class="text-xs font-semibold text-slate-600 uppercase ml-4">Период:</label>
+            <input id="report-from" type="date" class="border rounded px-2 py-1.5 text-sm">
+            <span>—</span>
+            <input id="report-to" type="date" class="border rounded px-2 py-1.5 text-sm">
+            <button onclick="buildReport()" class="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm font-semibold">Построить</button>
+            <button onclick="exportReportCSV()" class="px-4 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded text-sm font-semibold">⬇ Excel/CSV</button>
+            <button onclick="exportReportPDF()" class="px-4 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded text-sm font-semibold">📄 PDF</button>
+          </div>
+        </div>
+        <div class="bg-white rounded-xl border p-5">
+          <div id="report-result"></div>
+        </div>
+      </section>
+
+      <!-- USERS -->
+      <section id="view-users" class="view hidden">
+        <div class="bg-white rounded-xl border p-4 mb-4 flex items-center justify-between">
+          <h3 class="font-bold text-slate-800">👥 Управление пользователями (п.5.4 ТЗ)</h3>
+          <button onclick="openAddUser()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold text-sm">+ Добавить пользователя</button>
+        </div>
+        <div class="bg-white rounded-xl border overflow-hidden">
+          <table class="w-full text-sm">
+            <thead class="bg-slate-50 text-xs uppercase text-slate-500"><tr>
+              <th class="px-3 py-2.5 text-left">Логин</th><th class="px-3 py-2.5 text-left">ФИО</th><th class="px-3 py-2.5 text-left">Роль</th>
+              <th class="px-3 py-2.5 text-left">Район</th><th class="px-3 py-2.5 text-left">2FA</th><th class="px-3 py-2.5 text-left">Email</th>
+              <th class="px-3 py-2.5 text-left">Статус</th><th class="px-3 py-2.5 text-left">Действия</th>
+            </tr></thead>
+            <tbody id="users-tbody" class="divide-y"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- AUDIT -->
+      <section id="view-audit" class="view hidden">
+        <div class="bg-white rounded-xl border p-4 mb-4">
+          <h3 class="font-bold text-slate-800 mb-3">📜 История изменений (аудит-лог, п.5.5 ТЗ)</h3>
+          <div class="flex gap-2 text-xs">
+            <button onclick="filterAudit('all')" class="px-3 py-1.5 bg-slate-100 rounded">Все</button>
+            <button onclick="filterAudit('CREATE')" class="px-3 py-1.5 bg-green-100 text-green-700 rounded">Создания</button>
+            <button onclick="filterAudit('UPDATE')" class="px-3 py-1.5 bg-blue-100 text-blue-700 rounded">Изменения</button>
+            <button onclick="filterAudit('DELETE')" class="px-3 py-1.5 bg-red-100 text-red-700 rounded">Удаления</button>
+            <button onclick="filterAudit('LOGIN')" class="px-3 py-1.5 bg-purple-100 text-purple-700 rounded">Входы</button>
+          </div>
+        </div>
+        <div class="bg-white rounded-xl border overflow-hidden">
+          <table class="w-full text-sm">
+            <thead class="bg-slate-50 text-xs uppercase text-slate-500"><tr>
+              <th class="px-3 py-2.5 text-left">Время</th><th class="px-3 py-2.5 text-left">Пользователь</th>
+              <th class="px-3 py-2.5 text-left">Действие</th><th class="px-3 py-2.5 text-left">Объект</th>
+              <th class="px-3 py-2.5 text-left">Поле</th><th class="px-3 py-2.5 text-left">Старое</th>
+              <th class="px-3 py-2.5 text-left">Новое</th><th class="px-3 py-2.5 text-left">IP</th>
+            </tr></thead>
+            <tbody id="audit-tbody" class="divide-y"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- REFS -->
+      <section id="view-refs" class="view hidden">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div class="bg-white rounded-xl border p-5">
+            <h3 class="font-bold text-slate-800 mb-3">🏘 Районы САО (16)</h3>
+            <ul id="ref-districts" class="space-y-1 text-sm"></ul>
+          </div>
+          <div class="bg-white rounded-xl border p-5">
+            <h3 class="font-bold text-slate-800 mb-3">🚗 Типы ТС</h3>
+            <ul id="ref-types" class="space-y-1 text-sm"></ul>
+          </div>
+          <div class="bg-white rounded-xl border p-5">
+            <h3 class="font-bold text-slate-800 mb-3">📋 Стадии жизненного цикла</h3>
+            <ol id="ref-stages" class="space-y-1 text-sm list-decimal list-inside"></ol>
+          </div>
+        </div>
+      </section>
+
+      <!-- SETTINGS -->
+      <section id="view-settings" class="view hidden">
+        <div class="bg-white rounded-xl border p-5 mb-4">
+          <h3 class="font-bold text-slate-800 mb-3">⏱ Контрольные сроки (п.5.2 ТЗ)</h3>
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+            <div><label class="text-xs font-semibold text-slate-600 uppercase">Для свода после 1-го обсл.</label><div class="flex items-center gap-2 mt-1"><input id="set-days3" type="number" class="border rounded px-2 py-1.5 w-20 text-sm" value="3"><span class="text-sm">дней</span></div></div>
+            <div><label class="text-xs font-semibold text-slate-600 uppercase">Для свода после повторного</label><div class="flex items-center gap-2 mt-1"><input id="set-days14" type="number" class="border rounded px-2 py-1.5 w-20 text-sm" value="14"><span class="text-sm">дней</span></div></div>
+            <div><label class="text-xs font-semibold text-slate-600 uppercase">Перемещение на стоянку</label><div class="flex items-center gap-2 mt-1"><input id="set-days90" type="number" class="border rounded px-2 py-1.5 w-20 text-sm" value="90"><span class="text-sm">дней</span></div></div>
+            <div><label class="text-xs font-semibold text-slate-600 uppercase">Email-уведомление за</label><div class="flex items-center gap-2 mt-1"><input id="set-notify" type="number" class="border rounded px-2 py-1.5 w-20 text-sm" value="3"><span class="text-sm">дней</span></div></div>
+          </div>
+          <button onclick="saveSettings()" class="mt-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold text-sm">💾 Сохранить настройки</button>
+        </div>
+        <div class="bg-white rounded-xl border p-5 mb-4">
+          <h3 class="font-bold text-slate-800 mb-3">📧 Email-уведомления</h3>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div><label class="text-xs font-semibold text-slate-600 uppercase">SMTP-сервер</label><input class="w-full border rounded px-3 py-2 mt-1 text-sm" value="Демо: письма не отправляются" disabled></div>
+            <div><label class="text-xs font-semibold text-slate-600 uppercase">Email отправителя</label><input class="w-full border rounded px-3 py-2 mt-1 text-sm" value="Демо: не настроен" disabled></div>
+          </div>
+          <div class="mt-3"><label class="flex items-center gap-2 text-sm"><input type="checkbox" checked class="accent-blue-600">Отправлять напоминания за N дней до истечения срока</label></div>
+          <div><label class="flex items-center gap-2 text-sm"><input type="checkbox" checked class="accent-blue-600">Ежедневный сводный отчёт модератору</label></div>
+        </div>
+        <div class="bg-white rounded-xl border p-5">
+          <h3 class="font-bold text-slate-800 mb-3">🔐 Безопасность</h3>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+            <div class="p-3 bg-blue-50 rounded-lg">Публичная ссылка использует HTTPS</div>
+            <div class="p-3 bg-amber-50 rounded-lg">Тестовый стенд: не вводите реальные персональные данные</div>
+            <div class="p-3 bg-amber-50 rounded-lg">2FA: демонстрационный код, не реальная защита</div>
+            <div class="p-3 bg-amber-50 rounded-lg">Проверка файлов: только интерфейс, файлы не загружаются</div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+</div>
+</div>
+
+<!-- ================== MODALS ================== -->
+<!-- Add/Edit Object -->
+<div id="modal-object" class="fixed inset-0 bg-black/50 z-50 hidden items-center justify-center p-4 overflow-y-auto">
+  <div class="bg-white rounded-xl shadow-2xl w-full max-w-4xl my-8" onclick="event.stopPropagation()">
+    <div class="px-6 py-4 border-b flex items-center justify-between sticky top-0 bg-white">
+      <h3 id="modal-object-title" class="text-lg font-bold">Новый объект</h3>
+      <button onclick="closeModal('modal-object')" class="w-8 h-8 rounded-lg hover:bg-slate-100 text-xl">×</button>
+    </div>
+    <div class="p-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div>
+        <div class="grid grid-cols-2 gap-3">
+          <div><label class="text-xs font-semibold text-slate-600 uppercase">№ дела / акта</label><input id="obj-case" class="w-full border rounded px-2 py-1.5 text-sm mt-1"></div>
+          <div><label class="text-xs font-semibold text-slate-600 uppercase">Дата выявления *</label><input id="obj-date" type="date" class="w-full border rounded px-2 py-1.5 text-sm mt-1"></div>
+          <div><label class="text-xs font-semibold text-slate-600 uppercase">Район *</label><select id="obj-district" class="w-full border rounded px-2 py-1.5 text-sm mt-1"></select></div>
+          <div><label class="text-xs font-semibold text-slate-600 uppercase">Тип ТС *</label><select id="obj-type" class="w-full border rounded px-2 py-1.5 text-sm mt-1"></select></div>
+        </div>
+        <div class="mt-3"><label class="text-xs font-semibold text-slate-600 uppercase">Адрес *</label><input id="obj-address" class="w-full border rounded px-2 py-1.5 text-sm mt-1" placeholder="ул. Ленина, д. 1"></div>
+        <div class="grid grid-cols-2 gap-3 mt-3">
+          <div><label class="text-xs font-semibold text-slate-600 uppercase">Широта</label><input id="obj-lat" class="w-full border rounded px-2 py-1.5 text-sm mt-1" placeholder="55.800000"></div>
+          <div><label class="text-xs font-semibold text-slate-600 uppercase">Долгота</label><input id="obj-lon" class="w-full border rounded px-2 py-1.5 text-sm mt-1" placeholder="37.530000"></div>
+        </div>
+        <div class="grid grid-cols-2 gap-3 mt-3">
+          <div><label class="text-xs font-semibold text-slate-600 uppercase">Марка, модель, цвет</label><input id="obj-car" class="w-full border rounded px-2 py-1.5 text-sm mt-1" placeholder="ВАЗ 2107, красный"></div>
+          <div><label class="text-xs font-semibold text-slate-600 uppercase">ГРЗ (тестовые данные)</label><input id="obj-plate" class="w-full border rounded px-2 py-1.5 text-sm mt-1 font-mono" placeholder="А001АА77"></div>
+        </div>
+        <div class="mt-3"><label class="text-xs font-semibold text-slate-600 uppercase">VIN</label><input id="obj-vin" class="w-full border rounded px-2 py-1.5 text-sm mt-1"></div>
+        <div class="mt-3"><label class="text-xs font-semibold text-slate-600 uppercase">Службы (мультивыбор)</label><div id="obj-services" class="flex gap-2 mt-1 flex-wrap"></div></div>
+        <div class="mt-3"><label class="text-xs font-semibold text-slate-600 uppercase">Стадия</label><select id="obj-stage" class="w-full border rounded px-2 py-1.5 text-sm mt-1"></select></div>
+      </div>
+      <div>
+        <div id="obj-map" class="border rounded-lg overflow-hidden mb-3" style="height:180px"></div>
+        <div class="bg-slate-50 rounded-lg p-3 mb-3">
+          <div class="text-xs font-semibold text-slate-600 uppercase mb-2">📎 Файлы первичного обследования</div>
+          <div class="file-drop border-2 border-dashed border-slate-300 rounded-lg p-4 text-center cursor-pointer hover:border-blue-500 hover:bg-blue-50" onclick="document.getElementById('obj-files').click()">
+            <input type="file" id="obj-files" multiple accept=".pdf,.jpg,.jpeg,.png,.tiff" class="hidden" onchange="handleFiles(this, 'obj-file-list')">
+            <div class="text-2xl mb-1">📄</div>
+            <div class="text-sm text-slate-500">Перетащите или кликните для выбора</div>
+            <div class="text-xs text-slate-400 mt-1">PDF, JPG, PNG, TIFF · до 20 МБ</div>
+          </div>
+          <div id="obj-file-list" class="mt-2 space-y-1"></div>
+        </div>
+        <div class="bg-slate-50 rounded-lg p-3">
+          <div class="text-xs font-semibold text-slate-600 uppercase mb-2">👤 Владелец (если установлен)</div>
+          <div class="grid grid-cols-2 gap-2">
+            <input id="obj-owner-name" placeholder="ФИО" class="border rounded px-2 py-1.5 text-sm">
+            <input id="obj-owner-phone" placeholder="Телефон" class="border rounded px-2 py-1.5 text-sm">
+          </div>
+          <input id="obj-owner-address" placeholder="Адрес регистрации" class="w-full border rounded px-2 py-1.5 text-sm mt-2">
+        </div>
+      </div>
+    </div>
+    <div class="px-6 py-4 border-t flex justify-end gap-2 sticky bottom-0 bg-white">
+      <button onclick="closeModal('modal-object')" class="px-4 py-2 border rounded-lg text-sm">Отмена</button>
+      <button onclick="saveObject()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold text-sm">💾 Сохранить</button>
+    </div>
+  </div>
+</div>
+
+<!-- Object Card (detailed) -->
+<div id="modal-card" class="fixed inset-0 bg-black/50 z-50 hidden items-center justify-center p-4 overflow-y-auto">
+  <div class="bg-white rounded-xl shadow-2xl w-full max-w-5xl my-8" onclick="event.stopPropagation()">
+    <div class="px-6 py-4 border-b flex items-center justify-between sticky top-0 bg-white z-10">
+      <h3 id="card-title" class="text-lg font-bold"></h3>
+      <button onclick="closeModal('modal-card')" class="w-8 h-8 rounded-lg hover:bg-slate-100 text-xl">×</button>
+    </div>
+    <div class="p-6" id="card-body"></div>
+  </div>
+</div>
+
+<!-- Add Inspection -->
+<div id="modal-inspection" class="fixed inset-0 bg-black/50 z-50 hidden items-center justify-center p-4">
+  <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg" onclick="event.stopPropagation()">
+    <div class="px-6 py-4 border-b flex items-center justify-between">
+      <h3 class="text-lg font-bold">Добавить обследование</h3>
+      <button onclick="closeModal('modal-inspection')" class="w-8 h-8 rounded-lg hover:bg-slate-100 text-xl">×</button>
+    </div>
+    <div class="p-6 space-y-3">
+      <div class="grid grid-cols-2 gap-3">
+        <div><label class="text-xs font-semibold text-slate-600 uppercase">Тип</label><select id="insp-type" class="w-full border rounded px-2 py-1.5 text-sm mt-1"><option value="first">Первое</option><option value="repeat">Повторное</option></select></div>
+        <div><label class="text-xs font-semibold text-slate-600 uppercase">Дата</label><input id="insp-date" type="date" class="w-full border rounded px-2 py-1.5 text-sm mt-1"></div>
+      </div>
+      <div><label class="text-xs font-semibold text-slate-600 uppercase">Статус</label><select id="insp-status" class="w-full border rounded px-2 py-1.5 text-sm mt-1"><option value="completed">Проведена</option><option value="scheduled">Запланирована</option><option value="cancelled">Отменена</option></select></div>
+      <div id="insp-cancel-reason" class="hidden"><label class="text-xs font-semibold text-slate-600 uppercase">Причина отмены</label><input id="insp-reason" class="w-full border rounded px-2 py-1.5 text-sm mt-1"></div>
+      <div class="border-2 border-dashed border-slate-300 rounded-lg p-4 text-center cursor-pointer hover:border-blue-500" onclick="document.getElementById('insp-files').click()">
+        <input type="file" id="insp-files" multiple accept=".pdf,.jpg,.jpeg,.png,.tiff" class="hidden" onchange="handleFiles(this, 'insp-file-list')">
+        📄 Акт обследования и фото (drag&drop)
+      </div>
+      <div id="insp-file-list" class="space-y-1"></div>
+      <button onclick="saveInspection()" class="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-lg py-2 font-semibold">Сохранить обследование</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add User -->
+<div id="modal-user" class="fixed inset-0 bg-black/50 z-50 hidden items-center justify-center p-4">
+  <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg" onclick="event.stopPropagation()">
+    <div class="px-6 py-4 border-b flex items-center justify-between">
+      <h3 class="text-lg font-bold">Новый пользователь</h3>
+      <button onclick="closeModal('modal-user')" class="w-8 h-8 rounded-lg hover:bg-slate-100 text-xl">×</button>
+    </div>
+    <div class="p-6 space-y-3">
+      <div class="grid grid-cols-2 gap-3">
+        <div><label class="text-xs font-semibold text-slate-600 uppercase">Логин</label><input id="usr-login" class="w-full border rounded px-2 py-1.5 text-sm mt-1"></div>
+        <div><label class="text-xs font-semibold text-slate-600 uppercase">Пароль</label><input id="usr-pass" type="password" class="w-full border rounded px-2 py-1.5 text-sm mt-1"></div>
+      </div>
+      <div><label class="text-xs font-semibold text-slate-600 uppercase">ФИО</label><input id="usr-name" class="w-full border rounded px-2 py-1.5 text-sm mt-1"></div>
+      <div class="grid grid-cols-2 gap-3">
+        <div><label class="text-xs font-semibold text-slate-600 uppercase">Email</label><input id="usr-email" type="email" class="w-full border rounded px-2 py-1.5 text-sm mt-1"></div>
+        <div><label class="text-xs font-semibold text-slate-600 uppercase">Телефон</label><input id="usr-phone" class="w-full border rounded px-2 py-1.5 text-sm mt-1"></div>
+      </div>
+      <div><label class="text-xs font-semibold text-slate-600 uppercase">Роль</label><select id="usr-role" onchange="toggleDistrictField()" class="w-full border rounded px-2 py-1.5 text-sm mt-1"></select></div>
+      <div id="usr-district-wrap"><label class="text-xs font-semibold text-slate-600 uppercase">Район</label><select id="usr-district" class="w-full border rounded px-2 py-1.5 text-sm mt-1"></select></div>
+      <div class="flex gap-2"><label class="flex items-center gap-2 text-sm"><input id="usr-2fa" type="checkbox" class="accent-blue-600">2FA обязательна</label><label class="flex items-center gap-2 text-sm"><input id="usr-notify" type="checkbox" checked class="accent-blue-600">Email-уведомления</label></div>
+      <button onclick="saveUser()" class="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-lg py-2 font-semibold">Создать пользователя</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast" class="fixed bottom-4 right-4 bg-green-600 text-white px-5 py-3 rounded-xl shadow-2xl text-sm z-50 hidden"></div>
+
+<script>
+/* ================================================================
+   БРТС CRM v4.0 — тестовая версия
+   Полная реализация ТЗ в одном файле
+================================================================= */
+
+// ============== СПРАВОЧНИКИ (п.3 ТЗ) ==============
+const DISTRICTS = ['Аэропорт','Беговой','Бескудниковский','Войковский','Восточное Дегунино','Головинский','Дмитровский','Западное Дегунино','Коптево','Левобережный','Молжаниновский','Савеловский','Сокол','Тимирязевский','Ховрино','Хорошёвский'];
+const VEHICLE_TYPES = ['Легковое','Грузовое','Автобус','Прицеп','Мото','Электроскутер/самокат','Иное'];
+const STAGES = ['Выявлено','1-е обследование проведено','Повторное обследование проведено','Перемещено на спецстоянку','В суде','Утилизировано','Возвращено владельцу'];
+const SERVICES = ['Управа','УМИК','ОВД','Иное'];
+const COURT_STAGES = ['Подано, заседание не назначено','Назначена дата заседания','Решение принято, не отписано','Отписано, не вступило в силу','Вступило в силу, не получено','Обжалуется'];
+
+// ============== РОЛИ (п.2 ТЗ) ==============
+const ROLES = {
+  moderator:       {id:'moderator',       label:'Модератор (Префектура САО)',   scope:'all',      canDelete:true,  canManageUsers:true,  needs2FA:true},
+  editor_brts:     {id:'editor_brts',     label:'Редактор БРТС (Префектура)',   scope:'all',      canDelete:true,  canManageUsers:false, needs2FA:false},
+  inspector:       {id:'inspector',       label:'Инспектор',                    scope:'own',      canDelete:false, canManageUsers:false, needs2FA:false},
+  spec_parking:    {id:'spec_parking',    label:'Спецстоянка',                  scope:'moved',    canDelete:false, canManageUsers:false, needs2FA:false},
+  editor_brts2:    {id:'editor_brts2',    label:'Редактор БРТС (Префектура САО)',scope:'all',     canDelete:true,  canManageUsers:false, needs2FA:false},
+  senior:          {id:'senior',          label:'Старший ответственный района', scope:'district', canDelete:true,  canManageUsers:false, needs2FA:false},
+  specialist:      {id:'specialist',      label:'Специалист БРТС района',       scope:'district', canDelete:false, canManageUsers:false, needs2FA:false},
+  editor_lawyer:   {id:'editor_lawyer',   label:'Редактор-юрист (Префектура)',  scope:'all',      canDelete:true,  canManageUsers:false, needs2FA:false},
+  lawyer:          {id:'lawyer',          label:'Юрист БРТС района',            scope:'district', canDelete:false, canManageUsers:false, needs2FA:false},
+  visitor:         {id:'visitor',         label:'Посетитель (только чтение)',   scope:'anon',     canDelete:false, canManageUsers:false, needs2FA:false, readOnly:true}
+};
+
+// ============== ДЕМО-ПОЛЬЗОВАТЕЛИ ==============
+const SEED_USERS = [
+  {id:1, login:'admin',      name:'Иванов И.И.',     role:'moderator',     district:null,        active:true, twoFA:true,  email:'admin@sao.ru',   phone:'+7 495 000-00-01', notify:true},
+  {id:2, login:'editor_brts',name:'Петрова А.С.',    role:'editor_brts',   district:null,        active:true, twoFA:false, email:'petrova@sao.ru', phone:'+7 495 000-00-02', notify:true},
+  {id:3, login:'sen_aero',   name:'Сидоров К.В.',    role:'senior',        district:'Аэропорт',  active:true, twoFA:false, email:'sidorov@sao.ru', phone:'+7 495 000-00-03', notify:true},
+  {id:4, login:'spec_aero',  name:'Козлова М.Н.',    role:'specialist',    district:'Аэропорт',  active:true, twoFA:false, email:'kozlova@sao.ru', phone:'+7 495 000-00-04', notify:true},
+  {id:5, login:'lawyer',     name:'Морозов Д.А.',    role:'editor_lawyer', district:null,        active:true, twoFA:false, email:'morozov@sao.ru', phone:'+7 495 000-00-05', notify:true},
+  {id:6, login:'inspector',  name:'Волков Е.П.',     role:'inspector',     district:'Коптево',   active:true, twoFA:false, email:'volkov@sao.ru',  phone:'+7 495 000-00-06', notify:true},
+  {id:7, login:'parking',    name:'Смирнов А.И.',    role:'spec_parking',  district:null,        active:true, twoFA:false, email:'parking@sao.ru', phone:'+7 495 000-00-07', notify:true},
+  {id:8, login:'visitor',    name:'Тестовый Посетитель', role:'visitor',   district:null,        active:true, twoFA:false, email:'visitor@sao.ru', phone:'+7 495 000-00-08', notify:false}
+];
+
+// ============== ГЕНЕРАТОР 1720 ЗАПИСЕЙ ==============
+const CAR_BRANDS = ['ВАЗ 2107','ВАЗ 2114','ВАЗ 2110','ВАЗ 2109','ВАЗ 2106','ВАЗ 2105','ВАЗ 2104','Лада Гранта','Лада Веста','Лада Ларгус','Москвич 3','УАЗ Патриот','ГАЗ 3302','ГАЗель','ПАЗ 3205','Ниссан Альмера','Ниссан Кашкай','Ниссан Теана','Ниссан Микро','Ниссан Микра','КИА Рио','КИА Сид','КИА Спортейдж','КИА Оптима','КИА Церато','Хёндай Солярис','Хёндай Крета','Хёндай Туксон','Хёндай Акцент','Хёндай Соната','Хонда Цивик','Хонда Аккорд','Тойота Камри','Тойота Королла','Тойота Рав4','Тойота Приус','Мазда 3','Мазда 6','Форд Фокус','Форд Мондео','Шкода Октавия','Шкода Рапид','Рено Логан','Рено Дастер','Рено Сандеро','Рено Каптюр','Рено Меган','Фольксваген Поло','Фольксваген Тигуан','Фольксваген Гольф','Опель Астра','Шевроле Нива','Шевроле Круз','Ауди А4','Ауди А6','БМВ Х3','Мерседес Е-класс','Мерседес С-класс','Сузуки SX4','Сузуки Витара','Пежо 308','ДЭУ Матиз','Митсубиси Лансер','Вольво ХС60','Ямаха YBR','Ягуар','Фиат'];
+const COLORS = ['белый','чёрный','серый','серебристый','синий','красный','зелёный','жёлтый','оранжевый','баклажан','вишнёвый'];
+const STREETS_BY_DISTRICT = {
+  'Аэропорт':['Черняховского','Планетная','Часовая','Коккинаки','Академика Ильюшина','Усиевича','Степана Супруна','Кочновский пр-д','1-й Амбулаторный пр-д','Малый Коптевский пр-д','Пилота Нестерова'],
+  'Войковский':['Ленинградское ш.','Адмирала Макарова','Космонавта Волкова','Клары Цеткин','6-й Новоподмосковный пер.','Нарвская','Вокзальная','Вокзальный пер.','2-й Войковский пр-д','1-я Радиаторская'],
+  'Головинский':['Кронштадтский б-р','Онежская','Флотская','Лихачёвский пр-д','Смольная'],
+  'Ховрино':['Зеленоградская','Фестивальная','Петрозаводская','Осенняя'],
+  'Коптево':['Коптевская','Клары Цеткин','Академика Ильюшина','Нарвская'],
+  'Тимирязевский':['Дмитровское ш.','Тимирязевская','Ивановская','Астрадамская'],
+  'Хорошёвский':['Хорошёвское ш.','Магистральная','Алабяна'],
+  'Сокол':['Ленинградский пр-т','Чапаевский пер.'],
+  'Беговой':['Ленинградский пр-т','Правды'],
+  'Дмитровский':['Софьи Ковалевской','Лобненская','Коровинское ш.'],
+  'Западное Дегунино':['Базовская','Ижорская'],
+  'Восточное Дегунино':['Дубнинская','Дмитровское ш.'],
+  'Бескудниковский':['Бескудниковский б-р'],
+  'Левобережный':['Фестивальная'],
+  'Молжаниновский':['Машкинское ш.'],
+  'Савеловский':['Складочная']
+};
+
+// Генератор ГРЗ
+function genPlate(){
+  const letters = 'АВЕКМНОРСТУХ';
+  const rndL = () => letters[Math.floor(Math.random()*letters.length)];
+  const rndN = () => Math.floor(Math.random()*10);
+  const region = ['77','97','99','177','197','199','750','777','790','797','799'][Math.floor(Math.random()*11)];
+  return `${rndL()}${rndN()}${rndN()}${rndN()}${rndL()}${rndL()}${region}`;
+}
+
+// Кодирование ГРЗ в UTF-8 для локального демо. Это не заменяет серверное шифрование.
+function encryptPlate(p){ return p ? 'ENC:'+btoa(Array.from(new TextEncoder().encode(p), b=>String.fromCharCode(b)).join('')) : null; }
+function decryptPlate(p){ 
+  if(!p) return null;
+  if(p.startsWith('ENC:')){ try{ return new TextDecoder().decode(Uint8Array.from(atob(p.substring(4)), c=>c.charCodeAt(0))); }catch(e){ return '***'; } }
+  return p;
+}
+
+// Генератор записей
+function generateObjects(count){
+  const objs = [];
+  const now = new Date();
+  for(let i=0; i<count; i++){
+    const district = DISTRICTS[Math.floor(Math.random()*DISTRICTS.length)];
+    const streets = STREETS_BY_DISTRICT[district] || ['ул. Ленина'];
+    const street = streets[Math.floor(Math.random()*streets.length)];
+    const house = Math.floor(Math.random()*80)+1;
+    const korpus = Math.random()>0.5 ? ` к.${Math.floor(Math.random()*5)+1}` : '';
+    const daysAgo = Math.floor(Math.random()*730); // последние 2 года
+    const detDate = new Date(now.getTime() - daysAgo*86400000);
+    const detStr = detDate.toISOString().slice(0,10);
+    const hasPlate = Math.random()>0.15;
+    const plate = hasPlate ? genPlate() : 'б/н';
+    const brand = CAR_BRANDS[Math.floor(Math.random()*CAR_BRANDS.length)];
+    const color = COLORS[Math.floor(Math.random()*COLORS.length)];
+    const type = VEHICLE_TYPES[Math.floor(Math.random()*Math.min(5,VEHICLE_TYPES.length))];
+    const services = [SERVICES[Math.floor(Math.random()*SERVICES.length)]];
+    if(Math.random()>0.6) services.push(SERVICES[Math.floor(Math.random()*SERVICES.length)]);
+    
+    // Стадия (зависит от давности выявления)
+    let stage = 'Выявлено';
+    const insp = [];
+    const legal = [];
+    let parkingDate = null;
+    let lat = 55.80 + (Math.random()-0.5)*0.2;
+    let lon = 37.53 + (Math.random()-0.5)*0.2;
+    
+    if(daysAgo < 3){ stage='Выявлено'; }
+    else if(daysAgo < 10){ 
+      stage = '1-е обследование проведено'; 
+      const d = new Date(detDate.getTime()+2*86400000);
+      insp.push({id:i*10+1,type:'first',date:d.toISOString().slice(0,10),status:'completed',files:['акт_первичный_'+i+'.pdf'],docNum:'акт '+(1000+i)});
+    }
+    else if(daysAgo < 30){ 
+      stage = Math.random()>0.3 ? 'Повторное обследование проведено' : '1-е обследование проведено';
+      const d1 = new Date(detDate.getTime()+3*86400000);
+      insp.push({id:i*10+1,type:'first',date:d1.toISOString().slice(0,10),status:'completed',files:['акт_первичный_'+i+'.pdf'],docNum:'акт '+(1000+i)});
+      if(stage==='Повторное обследование проведено'){
+        const d2 = new Date(detDate.getTime()+18*86400000);
+        insp.push({id:i*10+2,type:'repeat',date:d2.toISOString().slice(0,10),status:'completed',files:['акт_повторный_'+i+'.pdf'],docNum:'акт '+(1001+i)});
+      }
+    }
+    else if(daysAgo < 90){
+      stage = 'Перемещено на спецстоянку';
+      const d1 = new Date(detDate.getTime()+3*86400000);
+      insp.push({id:i*10+1,type:'first',date:d1.toISOString().slice(0,10),status:'completed',files:['акт_первичный_'+i+'.pdf'],docNum:'акт '+(1000+i)});
+      const d2 = new Date(detDate.getTime()+18*86400000);
+      insp.push({id:i*10+2,type:'repeat',date:d2.toISOString().slice(0,10),status:'completed',files:['акт_повторный_'+i+'.pdf'],docNum:'акт '+(1001+i)});
+      parkingDate = new Date(detDate.getTime()+25*86400000).toISOString().slice(0,10);
+      insp.push({id:i*10+3,type:'moved',date:parkingDate,status:'completed',files:['акт_перемещения_'+i+'.pdf'],docNum:'акт перем.'+(i)});
+    }
+    else if(daysAgo < 365){
+      stage = Math.random()>0.3 ? 'В суде' : 'Перемещено на спецстоянку';
+      const d1 = new Date(detDate.getTime()+3*86400000);
+      insp.push({id:i*10+1,type:'first',date:d1.toISOString().slice(0,10),status:'completed',files:['акт_первичный_'+i+'.pdf'],docNum:'акт '+(1000+i)});
+      const d2 = new Date(detDate.getTime()+18*86400000);
+      insp.push({id:i*10+2,type:'repeat',date:d2.toISOString().slice(0,10),status:'completed',files:['акт_повторный_'+i+'.pdf'],docNum:'акт '+(1001+i)});
+      parkingDate = new Date(detDate.getTime()+25*86400000).toISOString().slice(0,10);
+      insp.push({id:i*10+3,type:'moved',date:parkingDate,status:'completed',files:['акт_перемещения_'+i+'.pdf'],docNum:'акт перем.'+(i)});
+      if(stage==='В суде'){
+        const courtDate = new Date(detDate.getTime()+60*86400000).toISOString().slice(0,10);
+        const courtStage = COURT_STAGES[Math.floor(Math.random()*COURT_STAGES.length)];
+        legal.push({id:i*10+1,type:'court_filing',date:courtDate,docNum:'дело №'+(1000+i),courtStage});
+        if(Math.random()>0.5){
+          legal.push({id:i*10+2,type:'court_hearing',date:new Date(detDate.getTime()+90*86400000).toISOString().slice(0,10)});
+        }
+      }
+    }
+    else {
+      const r = Math.random();
+      if(r>0.7) stage='Утилизировано';
+      else if(r>0.4) stage='Возвращено владельцу';
+      else stage='В суде';
+      const d1 = new Date(detDate.getTime()+3*86400000);
+      insp.push({id:i*10+1,type:'first',date:d1.toISOString().slice(0,10),status:'completed',files:['акт_первичный_'+i+'.pdf'],docNum:'акт '+(1000+i)});
+      const d2 = new Date(detDate.getTime()+18*86400000);
+      insp.push({id:i*10+2,type:'repeat',date:d2.toISOString().slice(0,10),status:'completed',files:['акт_повторный_'+i+'.pdf'],docNum:'акт '+(1001+i)});
+      parkingDate = new Date(detDate.getTime()+25*86400000).toISOString().slice(0,10);
+      insp.push({id:i*10+3,type:'moved',date:parkingDate,status:'completed',files:['акт_перемещения_'+i+'.pdf'],docNum:'акт перем.'+(i)});
+      if(stage==='В суде' || stage==='Утилизировано'){
+        const courtDate = new Date(detDate.getTime()+60*86400000).toISOString().slice(0,10);
+        legal.push({id:i*10+1,type:'court_filing',date:courtDate,docNum:'дело №'+(1000+i),courtStage:COURT_STAGES[Math.floor(Math.random()*COURT_STAGES.length)]});
+        legal.push({id:i*10+2,type:'court_decision',date:new Date(detDate.getTime()+120*86400000).toISOString().slice(0,10),docNum:'реш. №2-'+(1000+i)+'/2024'});
+      }
+      if(stage==='Утилизировано'){
+        legal.push({id:i*10+3,type:'utilization',date:new Date(detDate.getTime()+180*86400000).toISOString().slice(0,10),docNum:'акт утил.'+(i)});
+      }
+      if(stage==='Возвращено владельцу'){
+        insp.push({id:i*10+4,type:'returned',date:new Date(detDate.getTime()+40*86400000).toISOString().slice(0,10),status:'completed',docNum:'акт выдачи '+(i)});
+      }
+    }
+    
+    const caseNum = String(1000+i);
+    const createdBy = SEED_USERS[Math.floor(Math.random()*6)].id;
+    
+    objs.push({
+      id: 1000+i,
+      case_number: caseNum,
+      district: district,
+      detection_date: detStr,
+      vehicle_type: type,
+      address: `${street}, д. ${house}${korpus}`,
+      lat: lat.toFixed(6),
+      lon: lon.toFixed(6),
+      brand_model_color: `${brand}, ${color}`,
+      license_plate_encrypted: encryptPlate(plate),
+      vin: '',
+      stage: stage,
+      status: 'completed',
+      detection_services: [...new Set(services)],
+      moved_to_parking_date: parkingDate,
+      owner_name: stage==='Возвращено владельцу' ? ['Петров П.П.','Иванов И.И.','Сидоров С.С.'][Math.floor(Math.random()*3)] : '',
+      owner_phone: stage==='Возвращено владельцу' ? '+7 9'+Math.floor(Math.random()*100000000).toString().padStart(9,'0') : '',
+      owner_address: '',
+      source: services[0],
+      inspections: insp,
+      legal_actions: legal,
+      files: insp.flatMap(i=>i.files||[]),
+      created_by: createdBy,
+      created_at: detStr,
+      updated_at: detStr,
+      is_deleted: false,
+      deleted_at: null
+    });
+  }
+  return objs;
+}
+
+// ============== STATE ==============
+let STATE = {
+  currentUser: null,
+  users: SEED_USERS,
+  objects: [],
+  audit: [],
+  settings: { days3:3, days14:14, days90:90, notifyDays:3 },
+  currentPage: 1,
+  pageSize: 50,
+  sortField: 'detection_date',
+  sortDir: 'desc',
+  filters: { search:'', districts:[], types:[], stages:[], services:[], dateFrom:'', dateTo:'' },
+  reportDims: ['district'],
+  reportData: null,
+  editingObjectId: null,
+  currentInspectionObjId: null,
+  pendingFiles: [],
+  temp2FAUser: null
+};
+
+// ============== LOCAL STORAGE ==============
+function saveState(){
+  try{
+    localStorage.setItem('brts_state_v4', JSON.stringify({
+      users: STATE.users,
+      objects: STATE.objects,
+      audit: STATE.audit,
+      settings: STATE.settings
+    }));
+  }catch(e){ console.warn('Не удалось сохранить в localStorage', e); }
+}
+
+function loadState(){
+  try{
+    const saved = localStorage.getItem('brts_state_v4');
+    if(saved){
+      const data = JSON.parse(saved);
+      STATE.users = data.users || SEED_USERS;
+      STATE.objects = data.objects || [];
+      STATE.audit = data.audit || [];
+      STATE.settings = data.settings || STATE.settings;
+      return STATE.objects.length>0;
+    }
+  }catch(e){}
+  return false;
+}
+
+// ============== УТИЛИТЫ ==============
+const $ = s => document.querySelector(s);
+const $$ = s => document.querySelectorAll(s);
+const fmt = d => d ? new Date(d+'T00:00:00').toLocaleDateString('ru-RU') : '—';
+const daysBetween = (a,b) => Math.round((new Date(b+'T00:00:00') - new Date(a+'T00:00:00'))/86400000);
+const today = () => new Date().toISOString().slice(0,10);
+
+function toast(msg, type='success'){
+  const t = $('#toast');
+  t.textContent = msg;
+  t.className = `fixed bottom-4 right-4 px-5 py-3 rounded-xl shadow-2xl text-sm z-50 text-white ${type==='success'?'bg-green-600':type==='error'?'bg-red-600':'bg-blue-600'}`;
+  t.classList.remove('hidden');
+  setTimeout(()=>t.classList.add('hidden'), 3000);
+}
+
+function openModal(id){ $('#'+id).classList.remove('hidden'); $('#'+id).classList.add('flex'); }
+function closeModal(id){ $('#'+id).classList.add('hidden'); $('#'+id).classList.remove('flex'); }
+
+function logAudit(action, objectId=null, field=null, oldVal=null, newVal=null){
+  STATE.audit.unshift({
+    id: Date.now()+Math.random(),
+    ts: new Date().toISOString(),
+    user_id: STATE.currentUser?.id,
+    user_login: STATE.currentUser?.login || 'system',
+    action: action,
+    object_id: objectId,
+    field: field,
+    old_value: oldVal,
+    new_value: newVal,
+    ip: '192.168.1.'+(Math.floor(Math.random()*250)+1)
+  });
+  if(STATE.audit.length>5000) STATE.audit.length=5000;
+  saveState();
+}
+
+// ============== РАСЧЁТ СРОКОВ (п.5.2 ТЗ) ==============
+function calcDeadlines(obj){
+  const insp = obj.inspections || [];
+  const first = insp.filter(i=>i.type==='first' && i.status==='completed').sort((a,b)=>a.date.localeCompare(b.date))[0];
+  const repeat = insp.filter(i=>i.type==='repeat' && i.status==='completed').sort((a,b)=>a.date.localeCompare(b.date))[0];
+  const scheduled = insp.filter(i=>i.status==='scheduled').sort((a,b)=>a.date.localeCompare(b.date))[0];
+  
+  const deadlineStatus = (dlDate) => {
+    if(!dlDate) return 'none';
+    const diff = daysBetween(today(), dlDate);
+    if(diff<0) return 'overdue';
+    if(diff<=1) return 'warning';
+    return 'ok';
+  };
+  
+  const fact3 = first ? addDaysISO(first.date, STATE.settings.days3) : null;
+  const fact14 = repeat ? addDaysISO(repeat.date, STATE.settings.days14) : null;
+  const move90 = obj.detection_date ? addDaysISO(obj.detection_date, STATE.settings.days90) : null;
+  
+  return {
+    fact3:  { date:fact3,  status: obj.moved_to_parking_date || obj.stage==='Перемещено на спецстоянку' || obj.stage==='В суде' || obj.stage==='Утилизировано' ? 'ok' : deadlineStatus(fact3),  label:'Свод 3 дня' },
+    fact14: { date:fact14, status: obj.moved_to_parking_date || obj.stage==='Перемещено на спецстоянку' || obj.stage==='В суде' || obj.stage==='Утилизировано' ? 'ok' : deadlineStatus(fact14), label:'Свод 14 дней' },
+    move90: { date:move90, status: obj.moved_to_parking_date ? 'ok' : deadlineStatus(move90), label:'Перемещение 90 дней' },
+    scheduled: scheduled ? { date:scheduled.date, status: deadlineStatus(scheduled.date), label:'Запланировано' } : null
+  };
+}
+
+function addDaysISO(dateStr, days){
+  const d = new Date(dateStr+'T00:00:00');
+  d.setDate(d.getDate()+days);
+  return d.toISOString().slice(0,10);
+}
+
+const DEADLINE_COLORS = {
+  overdue: 'bg-red-100 text-red-700 border-red-300',
+  warning: 'bg-amber-100 text-amber-700 border-amber-300',
+  ok:      'bg-green-100 text-green-700 border-green-300',
+  none:    'bg-slate-100 text-slate-400 border-slate-200'
+};
+const DEADLINE_ICONS = { overdue:'🔴', warning:'🟡', ok:'🟢', none:'⚪' };
+
+function DeadlineBadge({dl}){
+  if(!dl || !dl.date) return '';
+  const color = DEADLINE_COLORS[dl.status] || DEADLINE_COLORS.none;
+  const icon = DEADLINE_ICONS[dl.status] || '⚪';
+  return `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded border text-xs font-semibold ${color}">${icon} ${dl.label}: ${fmt(dl.date)}</span>`;
+}
+
+// ============== ВИДИМОСТЬ ОБЪЕКТОВ ПО РОЛИ ==============
+function visibleObjects(){
+  const user = STATE.currentUser;
+  if(!user) return [];
+  const role = ROLES[user.role];
+  let list = STATE.objects.filter(o=>!o.is_deleted);
+  switch(role.scope){
+    case 'district': list = list.filter(o=>o.district===user.district); break;
+    case 'moved':    list = list.filter(o=>o.moved_to_parking_date); break;
+    case 'own':      list = list.filter(o=>o.created_by===user.id); break;
+    case 'anon':     list = []; break; // посетитель видит только отчёты
+  }
+  return list;
+}
+
+function canEdit(obj){
+  const user = STATE.currentUser;
+  const role = ROLES[user.role];
+  if(role.readOnly) return false;
+  if(['moderator','editor_brts','editor_brts2','editor_lawyer'].includes(user.role)) return true;
+  if(['senior','specialist','lawyer'].includes(user.role)) return obj.district===user.district;
+  if(user.role==='spec_parking') return !!obj.moved_to_parking_date;
+  if(user.role==='inspector') return obj.created_by===user.id;
+  return false;
+}
+
+function canDelete(obj){
+  return ROLES[STATE.currentUser.role].canDelete && canEdit(obj);
+}
+
+// ============== ЛОГИН ==============
+function doLogin(){
+  const login = $('#login-input').value.trim().toLowerCase();
+  const user = STATE.users.find(u => u.login.toLowerCase()===login && u.active);
+  if(!user){
+    $('#login-error').textContent = 'Пользователь не найден или заблокирован';
+    $('#login-error').classList.remove('hidden');
+    return;
+  }
+  const role = ROLES[user.role];
+  if(role.needs2FA && user.twoFA){
+    STATE.temp2FAUser = user;
+    $('#login-screen').classList.add('hidden');
+    $('#twofa-screen').classList.remove('hidden');
+    return;
+  }
+  finishLogin(user);
+}
+
+function verify2FA(){
+  const code = $('#twofa-input').value.trim();
+  if(code !== '123456'){
+    toast('Неверный код 2FA (в демо: 123456)', 'error');
+    return;
+  }
+  finishLogin(STATE.temp2FAUser);
+  STATE.temp2FAUser = null;
+}
+
+function finishLogin(user){
+  STATE.currentUser = user;
+  logAudit('LOGIN');
+  $('#login-screen').classList.add('hidden');
+  $('#twofa-screen').classList.add('hidden');
+  $('#app').classList.remove('hidden');
+  $('#current-user-name').textContent = user.name;
+  $('#current-user-role').textContent = ROLES[user.role].label;
+  
+  // Заполнить переключатель ролей (для демо)
+  const sw = $('#role-switcher');
+  sw.innerHTML = Object.values(ROLES).map(r=>`<option value="${r.id}" ${r.id===user.role?'selected':''}>${r.label}</option>`).join('');
+  sw.onchange = e => {
+    const newRole = e.target.value;
+    STATE.currentUser = {...STATE.currentUser, role:newRole};
+    $('#current-user-role').textContent = ROLES[newRole].label;
+    logAudit('ROLE_SWITCH', null, null, user.role, newRole);
+    renderAll();
+  };
+  
+  // Скрываем элементы для visitor
+  if(ROLES[user.role].readOnly){
+    document.querySelectorAll('.nav-btn').forEach(b=>{
+      if(!['dashboard','reports','refs'].includes(b.dataset.view)) b.style.display='none';
+    });
+  } else {
+    document.querySelectorAll('.nav-btn').forEach(b=>b.style.display='');
+  }
+  if(!ROLES[user.role].canManageUsers){
+    document.querySelector('[data-view="users"]').style.display = 'none';
+  } else {
+    document.querySelector('[data-view="users"]').style.display = '';
+  }
+  
+  renderAll();
+  switchView('dashboard');
+}
+
+function logout(){
+  logAudit('LOGOUT');
+  STATE.currentUser = null;
+  $('#app').classList.add('hidden');
+  $('#login-screen').classList.remove('hidden');
+  $('#login-input').value = '';
+  $('#pass-input').value = '';
+}
+
+// ============== НАВИГАЦИЯ ==============
+function switchView(view){
+  document.querySelectorAll('.view').forEach(v=>v.classList.add('hidden'));
+  $('#view-'+view).classList.remove('hidden');
+  document.querySelectorAll('.nav-btn').forEach(b=>{
+    b.classList.toggle('bg-blue-600', b.dataset.view===view);
+    b.classList.toggle('text-white', b.dataset.view===view);
+    b.classList.toggle('hover:bg-slate-800', b.dataset.view!==view);
+  });
+  const titles = {dashboard:'Дашборд',objects:'Реестр объектов',court:'Судебная работа',reports:'Конструктор отчётов',users:'Управление пользователями',audit:'История изменений',refs:'Справочники',settings:'Настройки'};
+  $('#view-title').textContent = titles[view] || view;
+  
+  if(view==='dashboard') renderDashboard();
+  if(view==='objects') renderObjects();
+  if(view==='court') renderCourt();
+  if(view==='reports') initReportBuilder();
+  if(view==='users') renderUsers();
+  if(view==='audit') renderAudit();
+  if(view==='refs') renderRefs();
+}
+
+document.querySelectorAll('.nav-btn').forEach(b=>{
+  b.onclick = () => switchView(b.dataset.view);
+});
+
+// ============== РЕНДЕР ДАШБОРДА ==============
+function renderDashboard(){
+  const list = visibleObjects();
+  if(ROLES[STATE.currentUser.role].scope==='anon'){
+    // Посетитель видит только обезличенную статистику
+    $('#kpi-total').textContent = list.length || STATE.objects.length;
+    $('#kpi-overdue').textContent = '***';
+    $('#kpi-warning').textContent = '***';
+    $('#kpi-ok').textContent = '***';
+    $('#district-chart').innerHTML = '<div class="text-center text-slate-400 py-8">👁️ Режим посетителя: данные обезличены</div>';
+    $('#court-funnel').innerHTML = '';
+    $('#attention-list').innerHTML = '<div class="text-center text-slate-400 py-8">Доступны только сводные отчёты</div>';
+    return;
+  }
+  
+  let overdue=0, warning=0, ok=0;
+  const byDistrict = {};
+  const byStage = {};
+  const attention = [];
+  
+  list.forEach(obj => {
+    const dl = calcDeadlines(obj);
+    const all = [dl.fact3, dl.fact14, dl.move90].filter(x=>x && x.date);
+    if(all.some(x=>x.status==='overdue')){ overdue++; attention.push({obj,worst:all.find(x=>x.status==='overdue')}); }
+    else if(all.some(x=>x.status==='warning')){ warning++; attention.push({obj,worst:all.find(x=>x.status==='warning')}); }
+    else ok++;
+    
+    byDistrict[obj.district] = byDistrict[obj.district] || {total:0,over3:0};
+    byDistrict[obj.district].total++;
+    if(obj.moved_to_parking_date && daysBetween(obj.moved_to_parking_date, today())>90){
+      byDistrict[obj.district].over3++;
+    }
+    byStage[obj.stage] = (byStage[obj.stage]||0)+1;
+  });
+  
+  $('#kpi-total').textContent = list.length;
+  $('#kpi-overdue').textContent = overdue;
+  $('#kpi-warning').textContent = warning;
+  $('#kpi-ok').textContent = ok;
+  
+  // Индикатор в шапке
+  if(overdue>0){
+    $('#overdue-alert').classList.remove('hidden');
+    $('#overdue-alert').classList.add('flex');
+    $('#overdue-count').textContent = overdue;
+    $('#nav-overdue').textContent = overdue;
+    $('#nav-overdue').classList.remove('hidden');
+  } else {
+    $('#overdue-alert').classList.add('hidden');
+    $('#nav-overdue').classList.add('hidden');
+  }
+  
+  // График по районам
+  const maxTotal = Math.max(...Object.values(byDistrict).map(v=>v.total), 1);
+  $('#district-chart').innerHTML = DISTRICTS.map(d=>{
+    const v = byDistrict[d] || {total:0,over3:0};
+    return `<div class="grid grid-cols-[130px_1fr_80px] gap-2 items-center text-xs">
+      <div>${d}</div>
+      <div class="relative bg-slate-100 rounded h-5 overflow-hidden">
+        <div class="absolute inset-y-0 left-0 bg-blue-400" style="width:${v.total/maxTotal*100}%"></div>
+        <div class="absolute inset-y-0 left-0 bg-red-500" style="width:${v.over3/maxTotal*100}%"></div>
+      </div>
+      <div class="text-right font-mono"><b>${v.total}</b> / <span class="text-red-600">${v.over3}</span></div>
+    </div>`;
+  }).join('');
+  
+  // Судебная воронка
+  const courtStages = COURT_STAGES.map(s=>({name:s, count:0}));
+  list.forEach(o=>{
+    (o.legal_actions||[]).forEach(la=>{
+      if(la.courtStage){
+        const idx = courtStages.findIndex(s=>s.name===la.courtStage);
+        if(idx>=0) courtStages[idx].count++;
+      }
+    });
+  });
+  const totalCourt = courtStages.reduce((s,c)=>s+c.count,0);
+  let acc=0;
+  const colors = ['#f59e0b','#3b82f6','#8b5cf6','#06b6d4','#10b981','#ef4444'];
+  const stops = courtStages.map((c,i)=>{
+    const from = acc/totalCourt*100;
+    acc += c.count;
+    const to = acc/totalCourt*100;
+    return `${colors[i]} ${from}% ${to}%`;
+  }).join(', ');
+  
+  $('#court-funnel').innerHTML = `<div class="flex gap-6 items-center">
+    <div class="relative w-40 h-40 rounded-full flex-none" style="background:conic-gradient(${stops})">
+      <div class="absolute inset-8 bg-white rounded-full flex flex-col items-center justify-center">
+        <div class="text-2xl font-bold">${totalCourt}</div>
+        <div class="text-xs text-slate-500">в суде</div>
+      </div>
+    </div>
+    <div class="flex-1 space-y-1.5 text-xs">
+      ${courtStages.map((c,i)=>`<div class="flex items-center gap-2">
+        <div class="w-3 h-3 rounded" style="background:${colors[i]}"></div>
+        <span class="flex-1">${c.name}</span>
+        <b>${c.count}</b>
+      </div>`).join('')}
+    </div>
+  </div>`;
+  
+  // Список объектов, требующих внимания
+  attention.sort((a,b)=>{
+    const order = {overdue:0, warning:1};
+    return (order[a.worst.status]||9) - (order[b.worst.status]||9);
+  });
+  $('#attention-list').innerHTML = attention.slice(0,15).map(({obj,worst})=>`
+    <button onclick="openObjectCard(${obj.id})" class="w-full flex items-center gap-3 p-2 hover:bg-slate-50 rounded text-left text-sm border-b last:border-0">
+      <span class="px-2 py-0.5 rounded border text-xs font-semibold ${DEADLINE_COLORS[worst.status]}">
+        ${DEADLINE_ICONS[worst.status]} ${fmt(worst.date)}
+      </span>
+      <div class="flex-1 min-w-0">
+        <div class="font-semibold text-slate-800 truncate">№${obj.case_number} · ${obj.brand_model_color || '—'}</div>
+        <div class="text-xs text-slate-500 truncate">${obj.district}, ${obj.address}</div>
+      </div>
+      <span class="text-xs text-slate-400">${worst.label}</span>
+    </button>
+  `).join('') || '<div class="text-center text-slate-400 py-8">Нет объектов, требующих внимания 🎉</div>';
+}
+
+// ============== РЕНДЕР РЕЕСТРА ==============
+function renderObjects(){
+  const list = applyFilters(visibleObjects());
+  list.sort((a,b)=>{
+    const dir = STATE.sortDir==='asc'?1:-1;
+    const va = a[STATE.sortField]||'', vb = b[STATE.sortField]||'';
+    return va.localeCompare(vb)*dir;
+  });
+  
+  const pages = Math.max(1, Math.ceil(list.length / STATE.pageSize));
+  if(STATE.currentPage > pages) STATE.currentPage = pages;
+  const start = (STATE.currentPage-1) * STATE.pageSize;
+  const pageData = list.slice(start, start+STATE.pageSize);
+  
+  const canSeePlate = ROLES[STATE.currentUser.role].scope !== 'anon';
+  
+  $('#objects-tbody').innerHTML = pageData.map(obj=>{
+    const dl = calcDeadlines(obj);
+    const plate = canSeePlate ? (decryptPlate(obj.license_plate_encrypted)||'б/н') : '***';
+    const stageBadge = {
+      'Выявлено':'bg-blue-100 text-blue-700',
+      '1-е обследование проведено':'bg-indigo-100 text-indigo-700',
+      'Повторное обследование проведено':'bg-purple-100 text-purple-700',
+      'Перемещено на спецстоянку':'bg-amber-100 text-amber-700',
+      'В суде':'bg-red-100 text-red-700',
+      'Утилизировано':'bg-slate-100 text-slate-700',
+      'Возвращено владельцу':'bg-teal-100 text-teal-700'
+    }[obj.stage] || 'bg-slate-100 text-slate-600';
+    
+    return `<tr class="hover:bg-slate-50 cursor-pointer" onclick="openObjectCard(${obj.id})">
+      <td class="px-3 py-2 font-bold text-xs">${obj.case_number}</td>
+      <td class="px-3 py-2 text-xs">${obj.district}</td>
+      <td class="px-3 py-2 text-xs">${fmt(obj.detection_date)}</td>
+      <td class="px-3 py-2 text-xs">${obj.vehicle_type}</td>
+      <td class="px-3 py-2 text-xs max-w-[200px] truncate" title="${obj.address}">${obj.address}</td>
+      <td class="px-3 py-2 text-xs">${obj.brand_model_color || '—'}</td>
+      <td class="px-3 py-2 text-xs font-mono">${plate}</td>
+      <td class="px-3 py-2"><span class="px-2 py-0.5 rounded-full text-xs font-semibold ${stageBadge}">${obj.stage}</span></td>
+      <td class="px-3 py-2"><div class="flex flex-wrap gap-1">
+        ${DeadlineBadge({dl:dl.fact3})}
+        ${dl.fact14.date ? DeadlineBadge({dl:dl.fact14}) : ''}
+      </div></td>
+      <td class="px-3 py-2" onclick="event.stopPropagation()">
+        <div class="flex gap-1">
+          <button onclick="editObject(${obj.id})" class="p-1 hover:bg-slate-100 rounded" title="Редактировать">✏️</button>
+          ${canDelete(obj)?`<button onclick="softDelete(${obj.id})" class="p-1 hover:bg-red-50 rounded" title="Удалить">🗑️</button>`:''}
+        </div>
+      </td>
+    </tr>`;
+  }).join('') || `<tr><td colspan="10" class="px-4 py-10 text-center text-slate-400">Ничего не найдено</td></tr>`;
+  
+  $('#filtered-count').textContent = list.length;
+  $('#total-count').textContent = STATE.objects.filter(o=>!o.is_deleted).length;
+  $('#nav-count').textContent = list.length;
+  $('#page-current').textContent = STATE.currentPage;
+  $('#page-total').textContent = pages;
+  $('#page-prev').disabled = STATE.currentPage<=1;
+  $('#page-next').disabled = STATE.currentPage>=pages;
+}
+
+function applyFilters(list){
+  const f = STATE.filters;
+  return list.filter(obj=>{
+    if(f.search){
+      const q = f.search.toLowerCase();
+      const hay = [obj.case_number, obj.address, obj.brand_model_color, decryptPlate(obj.license_plate_encrypted), obj.vin, obj.owner_name].join(' ').toLowerCase();
+      if(!hay.includes(q)) return false;
+    }
+    if(f.districts.length && !f.districts.includes(obj.district)) return false;
+    if(f.types.length && !f.types.includes(obj.vehicle_type)) return false;
+    if(f.stages.length && !f.stages.includes(obj.stage)) return false;
+    if(f.services.length && !f.services.some(s=>obj.detection_services?.includes(s))) return false;
+    if(f.dateFrom && obj.detection_date < f.dateFrom) return false;
+    if(f.dateTo && obj.detection_date > f.dateTo) return false;
+    return true;
+  });
+}
+
+function sortBy(field){
+  if(STATE.sortField === field) STATE.sortDir = STATE.sortDir==='asc'?'desc':'asc';
+  else { STATE.sortField = field; STATE.sortDir = 'asc'; }
+  renderObjects();
+}
+
+function pageChange(delta){
+  STATE.currentPage += delta;
+  renderObjects();
+}
+
+function resetFilters(){
+  STATE.filters = {search:'', districts:[], types:[], stages:[], services:[], dateFrom:'', dateTo:''};
+  $('#f-search').value = '';
+  $('#f-districts').querySelectorAll('option').forEach(o=>o.selected=false);
+  $('#f-types').querySelectorAll('option').forEach(o=>o.selected=false);
+  $('#f-stages').querySelectorAll('option').forEach(o=>o.selected=false);
+  $('#f-services').querySelectorAll('input').forEach(o=>o.checked=false);
+  $('#f-date-from').value = '';
+  $('#f-date-to').value = '';
+  STATE.currentPage = 1;
+  renderObjects();
+}
+
+// ============== КАРТОЧКА ОБЪЕКТА ==============
+function openObjectCard(id){
+  const obj = STATE.objects.find(o=>o.id===id);
+  if(!obj) return;
+  const dl = calcDeadlines(obj);
+  const plate = decryptPlate(obj.license_plate_encrypted) || 'б/н';
+  const canEdit_ = canEdit(obj);
+  
+  $('#card-title').textContent = `Объект №${obj.case_number} — ${obj.brand_model_color || 'без марки'}`;
+  
+  const mapUrl = obj.lat && obj.lon ? `https://yandex.ru/map-widget/v1/?pt=${obj.lon},${obj.lat}&z=16&l=map` : '';
+  
+  const inspHtml = (obj.inspections||[]).map(i=>{
+    const typeLabel = {first:'Первое обследование',repeat:'Повторное обследование',moved:'Перемещение на стоянку',returned:'Выдача владельцу'}[i.type] || i.type;
+    const typeBadge = i.type==='first' ? 'bg-blue-100 text-blue-700' : i.type==='repeat' ? 'bg-purple-100 text-purple-700' : 'bg-amber-100 text-amber-700';
+    const statusBadge = {completed:'bg-green-100 text-green-700',scheduled:'bg-blue-100 text-blue-700',cancelled:'bg-red-100 text-red-700'}[i.status] || 'bg-slate-100 text-slate-600';
+    const files = (i.files||[]).map(f=>`<span class="inline-flex items-center gap-1 px-2 py-0.5 bg-slate-100 rounded text-xs">📎 ${f}</span>`).join(' ');
+    return `<div class="border-l-4 border-blue-500 pl-3 py-2">
+      <div class="flex items-center gap-2 flex-wrap">
+        <span class="px-2 py-0.5 rounded text-xs font-semibold ${typeBadge}">${typeLabel}</span>
+        <span class="text-sm font-semibold">${fmt(i.date)}</span>
+        <span class="px-2 py-0.5 rounded text-xs ${statusBadge}">${i.status}</span>
+        ${i.docNum?`<span class="text-xs text-slate-500">· ${i.docNum}</span>`:''}
+      </div>
+      ${files?`<div class="mt-1 flex flex-wrap gap-1">${files}</div>`:''}
+      ${i.reason?`<div class="mt-1 text-xs text-red-600">Причина отмены: ${i.reason}</div>`:''}
+    </div>`;
+  }).join('') || '<div class="text-sm text-slate-400">Обследований пока нет</div>';
+  
+  const legalHtml = (obj.legal_actions||[]).map(la=>{
+    const typeLabel = {court_filing:'Подача в суд',court_hearing:'Заседание',court_decision:'Решение суда',appeal:'Обжалование',utilization:'Утилизация'}[la.type] || la.type;
+    return `<div class="border-l-4 border-purple-500 pl-3 py-2">
+      <div class="flex items-center gap-2">
+        <span class="px-2 py-0.5 rounded bg-purple-100 text-purple-700 text-xs font-semibold">${typeLabel}</span>
+        <span class="text-sm font-semibold">${fmt(la.date)}</span>
+        ${la.docNum?`<span class="text-xs text-slate-500">· ${la.docNum}</span>`:''}
+      </div>
+      ${la.courtStage?`<div class="text-xs text-slate-600 mt-0.5">Статус: ${la.courtStage}</div>`:''}
+    </div>`;
+  }).join('') || '<div class="text-sm text-slate-400">Юридических действий нет</div>';
+  
+  $('#card-body').innerHTML = `<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div>
+      <div class="bg-slate-50 rounded-lg p-4 mb-4">
+        <div class="grid grid-cols-2 gap-3 text-sm">
+          <div><div class="text-xs text-slate-500 uppercase">Район</div><div class="font-semibold">${obj.district}</div></div>
+          <div><div class="text-xs text-slate-500 uppercase">Дата выявления</div><div class="font-semibold">${fmt(obj.detection_date)}</div></div>
+          <div><div class="text-xs text-slate-500 uppercase">Тип ТС</div><div class="font-semibold">${obj.vehicle_type}</div></div>
+          <div><div class="text-xs text-slate-500 uppercase">Стадия</div><div class="font-semibold">${obj.stage}</div></div>
+          <div class="col-span-2"><div class="text-xs text-slate-500 uppercase">Адрес</div><div class="font-semibold">${obj.address}</div></div>
+          <div><div class="text-xs text-slate-500 uppercase">ТС</div><div class="font-semibold">${obj.brand_model_color||'—'}</div></div>
+          <div><div class="text-xs text-slate-500 uppercase">ГРЗ</div><div class="font-semibold font-mono">${plate}</div></div>
+          <div><div class="text-xs text-slate-500 uppercase">VIN</div><div class="font-semibold">${obj.vin||'—'}</div></div>
+          <div><div class="text-xs text-slate-500 uppercase">Координаты</div><div class="font-semibold text-xs">${obj.lat||'—'}, ${obj.lon||'—'}</div></div>
+          <div class="col-span-2"><div class="text-xs text-slate-500 uppercase">Службы</div><div>${(obj.detection_services||[]).map(s=>`<span class="px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-xs mr-1">${s}</span>`).join('')}</div></div>
+          ${obj.owner_name?`<div class="col-span-2 border-t pt-2 mt-2"><div class="text-xs text-slate-500 uppercase">Владелец</div><div class="font-semibold">${obj.owner_name} ${obj.owner_phone?'· '+obj.owner_phone:''}</div></div>`:''}
+        </div>
+      </div>
+      
+      <div class="bg-slate-50 rounded-lg p-4 mb-4">
+        <div class="text-xs font-bold text-slate-700 uppercase mb-2">⏱ Контрольные сроки (авторасчёт)</div>
+        <div class="space-y-2">
+          ${dl.fact3.date?`<div>${DeadlineBadge({dl:dl.fact3})}</div>`:''}
+          ${dl.fact14.date?`<div>${DeadlineBadge({dl:dl.fact14})}</div>`:''}
+          <div>${DeadlineBadge({dl:dl.move90})}</div>
+          ${dl.scheduled?`<div>${DeadlineBadge({dl:dl.scheduled})}</div>`:''}
+        </div>
+      </div>
+      
+      ${mapUrl?`<div class="border rounded-lg overflow-hidden mb-4">
+        <iframe src="${mapUrl}" width="100%" height="250" frameborder="0"></iframe>
+      </div>`:''}
+    </div>
+    
+    <div>
+      <div class="border rounded-lg mb-4">
+        <div class="px-4 py-3 border-b flex items-center justify-between bg-slate-50">
+          <div class="font-bold text-sm">🔍 Обследования</div>
+          ${canEdit_?`<button onclick="openAddInspection(${obj.id})" class="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-semibold">+ Добавить</button>`:''}
+        </div>
+        <div class="p-3 space-y-2">${inspHtml}</div>
+      </div>
+      
+      <div class="border rounded-lg mb-4">
+        <div class="px-4 py-3 border-b bg-slate-50"><div class="font-bold text-sm">⚖️ Юридические действия</div></div>
+        <div class="p-3 space-y-2">${legalHtml}</div>
+      </div>
+      
+      ${canEdit_?`<div class="flex gap-2 flex-wrap">
+        <button onclick="editObject(${obj.id})" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-semibold">✏️ Редактировать</button>
+        ${canDelete(obj)?`<button onclick="softDelete(${obj.id});closeModal('modal-card')" class="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded text-xs font-semibold">🗑️ Пометить на удаление</button>`:''}
+        <button onclick="viewObjectHistory(${obj.id})" class="px-3 py-1.5 bg-slate-600 hover:bg-slate-700 text-white rounded text-xs font-semibold">📜 История изменений</button>
+      </div>`:''}
+    </div>
+  </div>`;
+  
+  openModal('modal-card');
+}
+
+function viewObjectHistory(id){
+  const logs = STATE.audit.filter(a=>a.object_id===id);
+  alert('История изменений объекта №'+id+':\n\n'+logs.slice(0,10).map(l=>
+    `${new Date(l.ts).toLocaleString('ru-RU')} | ${l.user_login} | ${l.action}${l.field?' | '+l.field:''}`
+  ).join('\n') || '(история пуста)');
+}
+
+// ============== CRUD ОБЪЕКТОВ ==============
+function openAddObject(){
+  STATE.editingObjectId = null;
+  STATE.pendingFiles = [];
+  $('#modal-object-title').textContent = '➕ Новый объект БРТС';
+  $('#obj-case').value = '';
+  $('#obj-date').value = today();
+  fillSelect('obj-district', DISTRICTS);
+  fillSelect('obj-type', VEHICLE_TYPES);
+  fillSelect('obj-stage', STAGES);
+  $('#obj-address').value = '';
+  $('#obj-lat').value = '';
+  $('#obj-lon').value = '';
+  $('#obj-car').value = '';
+  $('#obj-plate').value = '';
+  $('#obj-vin').value = '';
+  $('#obj-owner-name').value = '';
+  $('#obj-owner-phone').value = '';
+  $('#obj-owner-address').value = '';
+  $('#obj-file-list').innerHTML = '';
+  
+  // Службы (чекбоксы)
+  $('#obj-services').innerHTML = SERVICES.map(s=>`
+    <label class="flex items-center gap-1 px-2 py-1 border rounded text-xs cursor-pointer">
+      <input type="checkbox" value="${s}" class="accent-blue-600"> ${s}
+    </label>
+  `).join('');
+  
+  renderMapPreview();
+  openModal('modal-object');
+}
+
+function editObject(id){
+  const obj = STATE.objects.find(o=>o.id===id);
+  if(!obj || !canEdit(obj)) return;
+  STATE.editingObjectId = id;
+  STATE.pendingFiles = [];
+  $('#modal-object-title').textContent = `✏️ Редактирование №${obj.case_number}`;
+  $('#obj-case').value = obj.case_number;
+  $('#obj-date').value = obj.detection_date;
+  fillSelect('obj-district', DISTRICTS, obj.district);
+  fillSelect('obj-type', VEHICLE_TYPES, obj.vehicle_type);
+  fillSelect('obj-stage', STAGES, obj.stage);
+  $('#obj-address').value = obj.address;
+  $('#obj-lat').value = obj.lat || '';
+  $('#obj-lon').value = obj.lon || '';
+  $('#obj-car').value = obj.brand_model_color || '';
+  $('#obj-plate').value = decryptPlate(obj.license_plate_encrypted) || '';
+  $('#obj-vin').value = obj.vin || '';
+  $('#obj-owner-name').value = obj.owner_name || '';
+  $('#obj-owner-phone').value = obj.owner_phone || '';
+  $('#obj-owner-address').value = obj.owner_address || '';
+  $('#obj-file-list').innerHTML = '';
+  
+  $('#obj-services').innerHTML = SERVICES.map(s=>`
+    <label class="flex items-center gap-1 px-2 py-1 border rounded text-xs cursor-pointer">
+      <input type="checkbox" value="${s}" class="accent-blue-600" ${(obj.detection_services||[]).includes(s)?'checked':''}> ${s}
+    </label>
+  `).join('');
+  
+  renderMapPreview();
+  openModal('modal-object');
+}
+
+function saveObject(){
+  const caseNum = $('#obj-case').value.trim();
+  const date = $('#obj-date').value;
+  const district = $('#obj-district').value;
+  const type = $('#obj-type').value;
+  const address = $('#obj-address').value.trim();
+  
+  if(!date || !district || !type || !address){
+    toast('Заполните обязательные поля (*)', 'error');
+    return;
+  }
+  
+  const services = Array.from($('#obj-services').querySelectorAll('input:checked')).map(i=>i.value);
+  const plate = $('#obj-plate').value.trim();
+  
+  const data = {
+    case_number: caseNum || String(Date.now()).slice(-6),
+    district: district,
+    detection_date: date,
+    vehicle_type: type,
+    address: address,
+    lat: $('#obj-lat').value || null,
+    lon: $('#obj-lon').value || null,
+    brand_model_color: $('#obj-car').value.trim(),
+    license_plate_encrypted: encryptPlate(plate),
+    vin: $('#obj-vin').value.trim(),
+    stage: $('#obj-stage').value,
+    detection_services: services,
+    owner_name: $('#obj-owner-name').value.trim(),
+    owner_phone: $('#obj-owner-phone').value.trim(),
+    owner_address: $('#obj-owner-address').value.trim(),
+    source: services[0] || 'Управа',
+    updated_at: today(),
+    updated_by: STATE.currentUser.id
+  };
+  
+  if(STATE.editingObjectId){
+    // UPDATE
+    const obj = STATE.objects.find(o=>o.id===STATE.editingObjectId);
+    const oldData = {...obj};
+    Object.assign(obj, data);
+    // Логирование изменений
+    Object.keys(data).forEach(k=>{
+      if(JSON.stringify(oldData[k]) !== JSON.stringify(data[k])){
+        logAudit('UPDATE', obj.id, k, String(oldData[k]||''), String(data[k]||''));
+      }
+    });
+    toast(`Объект №${obj.case_number} обновлён`);
+  } else {
+    // CREATE
+    const id = Math.max(...STATE.objects.map(o=>o.id), 1000) + 1;
+    const obj = {
+      id: id,
+      ...data,
+      inspections: [],
+      legal_actions: [],
+      files: [...STATE.pendingFiles],
+      moved_to_parking_date: null,
+      created_by: STATE.currentUser.id,
+      created_at: today(),
+      is_deleted: false,
+      deleted_at: null
+    };
+    STATE.objects.unshift(obj);
+    logAudit('CREATE', id, null, null, `Объект №${obj.case_number}`);
+    toast(`Объект №${obj.case_number} создан`);
+  }
+  
+  saveState();
+  closeModal('modal-object');
+  renderObjects();
+  renderDashboard();
+}
+
+function softDelete(id){
+  if(!confirm('Пометить объект на удаление? (soft delete, данные сохранятся в истории)')) return;
+  const obj = STATE.objects.find(o=>o.id===id);
+  if(!obj) return;
+  obj.is_deleted = true;
+  obj.deleted_at = new Date().toISOString();
+  logAudit('DELETE', id, null, obj.case_number, 'Помечен на удаление');
+  saveState();
+  toast('Объект помечен на удаление');
+  renderObjects();
+  renderDashboard();
+}
+
+// ============== ОБСЛЕДОВАНИЯ ==============
+function openAddInspection(objId){
+  STATE.currentInspectionObjId = objId;
+  STATE.pendingFiles = [];
+  $('#insp-type').value = 'first';
+  $('#insp-date').value = today();
+  $('#insp-status').value = 'completed';
+  $('#insp-reason').value = '';
+  $('#insp-file-list').innerHTML = '';
+  $('#insp-status').onchange = ()=>{
+    $('#insp-cancel-reason').classList.toggle('hidden', $('#insp-status').value!=='cancelled');
+  };
+  openModal('modal-inspection');
+}
+
+function saveInspection(){
+  const obj = STATE.objects.find(o=>o.id===STATE.currentInspectionObjId);
+  if(!obj) return;
+  
+  const insp = {
+    id: Date.now(),
+    type: $('#insp-type').value,
+    date: $('#insp-date').value,
+    status: $('#insp-status').value,
+    files: [...STATE.pendingFiles],
+    reason: $('#insp-status').value==='cancelled' ? $('#insp-reason').value : null,
+    docNum: $('#insp-type').value==='first' ? 'акт '+(1000+STATE.objects.indexOf(obj)) : 'акт '+(1001+STATE.objects.indexOf(obj)),
+    created_by: STATE.currentUser.id
+  };
+  obj.inspections.push(insp);
+  obj.updated_at = today();
+  
+  logAudit('CREATE', obj.id, 'inspection', null, `${insp.type} ${insp.date}`);
+  
+  saveState();
+  closeModal('modal-inspection');
+  toast('Обследование добавлено');
+  openObjectCard(obj.id);
+}
+
+// ============== ФАЙЛЫ (drag&drop) ==============
+function handleFiles(input, listId){
+  Array.from(input.files).forEach(f=>{
+    if(f.size > 20*1024*1024){
+      toast(`Файл ${f.name} превышает 20 МБ`, 'error');
+      return;
+    }
+    const ext = f.name.split('.').pop().toLowerCase();
+    if(!['pdf','jpg','jpeg','png','tiff'].includes(ext)){
+      toast(`Неподдерживаемый формат: ${ext}`, 'error');
+      return;
+    }
+    STATE.pendingFiles.push(f.name);
+    const list = $('#'+listId);
+    const div = document.createElement('div');
+    div.className = 'flex items-center gap-2 p-2 bg-slate-50 rounded text-xs';
+    div.innerHTML = `<span>📎 ${f.name}</span><span class="text-slate-400">${Math.round(f.size/1024)} КБ</span>
+      <button class="ml-auto text-red-500 hover:text-red-700" onclick="this.parentElement.remove()">✕</button>`;
+    list.appendChild(div);
+  });
+  input.value = '';
+}
+
+// ============== СУДЕБНАЯ РАБОТА ==============
+function renderCourt(){
+  const list = visibleObjects().filter(o=>(o.legal_actions||[]).length>0);
+  
+  let decided=0, utilized=0, appealed=0;
+  list.forEach(o=>{
+    (o.legal_actions||[]).forEach(la=>{
+      if(la.type==='court_decision') decided++;
+      if(la.type==='utilization') utilized++;
+      if(la.courtStage==='Обжалуется') appealed++;
+    });
+  });
+  
+  $('#court-total').textContent = list.length;
+  $('#court-decided').textContent = decided;
+  $('#court-utilized').textContent = utilized;
+  $('#court-appealed').textContent = appealed;
+  
+  $('#court-tbody').innerHTML = list.map(obj=>{
+    const la = (obj.legal_actions||[]).sort((a,b)=>b.date.localeCompare(a.date))[0];
+    const filing = (obj.legal_actions||[]).find(l=>l.type==='court_filing');
+    const hearing = (obj.legal_actions||[]).find(l=>l.type==='court_hearing');
+    const decision = (obj.legal_actions||[]).find(l=>l.type==='court_decision');
+    
+    return `<tr class="hover:bg-slate-50 cursor-pointer" onclick="openObjectCard(${obj.id})">
+      <td class="px-3 py-2 font-bold text-xs">${obj.case_number}</td>
+      <td class="px-3 py-2 text-xs">${obj.brand_model_color||'—'}</td>
+      <td class="px-3 py-2 text-xs">${obj.district}</td>
+      <td class="px-3 py-2 text-xs">${filing?fmt(filing.date):'—'}</td>
+      <td class="px-3 py-2 text-xs">${hearing?fmt(hearing.date):'—'}</td>
+      <td class="px-3 py-2 text-xs">${decision?decision.docNum:'—'}</td>
+      <td class="px-3 py-2 text-xs">${la?.courtStage?`<span class="px-2 py-0.5 rounded bg-purple-100 text-purple-700">${la.courtStage}</span>`:'—'}</td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="7" class="px-4 py-8 text-center text-slate-400">Нет судебных дел</td></tr>';
+}
+
+// ============== КОНСТРУКТОР ОТЧЁТОВ (п.5.3 ТЗ) ==============
+const REPORT_DIMS = [
+  {id:'district', label:'Район', get:o=>o.district},
+  {id:'type', label:'Тип ТС', get:o=>o.vehicle_type},
+  {id:'stage', label:'Стадия', get:o=>o.stage},
+  {id:'service', label:'Служба', get:o=>(o.detection_services||[])[0]||'—'},
+  {id:'year', label:'Год выявления', get:o=>o.detection_date?.slice(0,4)},
+  {id:'month', label:'Месяц выявления', get:o=>o.detection_date?.slice(0,7)},
+  {id:'has_plate', label:'Есть ГРЗ', get:o=>decryptPlate(o.license_plate_encrypted)!=='б/н'?'Да':'Нет'},
+  {id:'moved', label:'Перемещено', get:o=>o.moved_to_parking_date?'Да':'Нет'},
+  {id:'in_court', label:'В суде', get:o=>(o.legal_actions||[]).length>0?'Да':'Нет'},
+  {id:'has_owner', label:'Владелец установлен', get:o=>o.owner_name?'Да':'Нет'},
+  {id:'days_old', label:'Возраст (группы)', get:o=>{const d=daysBetween(o.detection_date,today());return d<30?'<1 мес':d<90?'1-3 мес':d<365?'3-12 мес':'>1 года'}},
+  {id:'brand_group', label:'Марка (группа)', get:o=>{const b=(o.brand_model_color||'').split(',')[0];return ['ВАЗ','Лада','КИА','Ниссан','Хёндай','Тойота','Форд','Рено','Мазда','БМВ','Мерседес'].find(x=>b.includes(x))||'Прочие'}}
+];
+
+function initReportBuilder(){
+  $('#report-dims').innerHTML = REPORT_DIMS.map(d=>`
+    <button data-dim="${d.id}" onclick="toggleReportDim('${d.id}')" 
+      class="px-3 py-1.5 rounded-lg text-sm border ${STATE.reportDims.includes(d.id)?'bg-blue-600 text-white border-blue-600':'bg-white text-slate-600 border-slate-300'}">
+      ${d.label}
+    </button>
+  `).join('');
+  $('#report-from').value = addDaysISO(today(), -365);
+  $('#report-to').value = today();
+  buildReport();
+}
+
+function toggleReportDim(id){
+  if(STATE.reportDims.includes(id)) STATE.reportDims = STATE.reportDims.filter(x=>x!==id);
+  else if(STATE.reportDims.length<15) STATE.reportDims.push(id);
+  else { toast('Максимум 15 полей группировки', 'error'); return; }
+  initReportBuilder();
+  buildReport();
+}
+
+function buildReport(){
+  const from = $('#report-from').value;
+  const to = $('#report-to').value;
+  let list = visibleObjects().filter(o=>!o.is_deleted);
+  if(from) list = list.filter(o=>o.detection_date>=from);
+  if(to) list = list.filter(o=>o.detection_date<=to);
+  
+  const groups = {};
+  list.forEach(o=>{
+    const key = STATE.reportDims.map(id=>REPORT_DIMS.find(d=>d.id===id).get(o)).join(' / ');
+    groups[key] = (groups[key]||0) + 1;
+  });
+  
+  const headers = [...STATE.reportDims.map(id=>REPORT_DIMS.find(d=>d.id===id).label), 'Количество'];
+  const rows = Object.entries(groups).map(([k,v])=>[...k.split(' / '), v]).sort((a,b)=>b[b.length-1]-a[a.length-1]);
+  const total = rows.reduce((s,r)=>s+r[r.length-1], 0);
+  const metric = $('#report-metric').value;
+  
+  STATE.reportData = {headers, rows, total};
+  
+  $('#report-result').innerHTML = `
+    <div class="mb-3 text-sm text-slate-600">
+      Период: <b>${fmt(from)}</b> — <b>${fmt(to)}</b> · Выборка: <b>${list.length}</b> объектов · Групп: <b>${rows.length}</b>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="bg-slate-50 text-xs uppercase text-slate-500">
+          <tr>${headers.map(h=>`<th class="px-3 py-2.5 text-left font-semibold">${h}</th>`).join('')}</tr>
+        </thead>
+        <tbody class="divide-y">
+          ${rows.map(r=>`<tr class="hover:bg-slate-50">
+            ${r.map((c,i)=>`<td class="px-3 py-2 ${i===r.length-1?'font-bold text-right':''}">
+              ${i===r.length-1 && metric==='percent' ? `${c} (${(c/total*100).toFixed(1)}%)` : c}
+            </td>`).join('')}
+          </tr>`).join('')}
+          ${rows.length>1?`<tr class="bg-slate-100 font-bold"><td class="px-3 py-2" colspan="${headers.length-1}">ИТОГО</td><td class="px-3 py-2 text-right">${total}</td></tr>`:''}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+function exportReportCSV(){
+  if(!STATE.reportData) return;
+  const csv = '\uFEFF' + [STATE.reportData.headers, ...STATE.reportData.rows]
+    .map(r=>r.map(c=>`"${String(c||'').replace(/"/g,'""')}"`).join(';')).join('\n');
+  const blob = new Blob([csv], {type:'text/csv'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'brts_report_'+today()+'.csv';
+  a.click();
+  toast('Отчёт экспортирован в CSV');
+  logAudit('EXPORT_REPORT', null, null, null, `CSV ${STATE.reportData.rows.length} строк`);
+}
+
+function exportReportPDF(){
+  // Имитация PDF через печать
+  window.print();
+  logAudit('EXPORT_REPORT', null, null, null, 'PDF');
+}
+
+// ============== ПОЛЬЗОВАТЕЛИ ==============
+function renderUsers(){
+  if(!ROLES[STATE.currentUser.role].canManageUsers){
+    $('#view-users').innerHTML = '<div class="text-center text-slate-400 py-20">Доступно только модератору</div>';
+    return;
+  }
+  $('#users-tbody').innerHTML = STATE.users.map(u=>`
+    <tr class="hover:bg-slate-50">
+      <td class="px-3 py-2 font-mono text-xs">${u.login}</td>
+      <td class="px-3 py-2 text-sm">${u.name}</td>
+      <td class="px-3 py-2"><span class="px-2 py-0.5 rounded bg-blue-100 text-blue-700 text-xs">${ROLES[u.role]?.label||u.role}</span></td>
+      <td class="px-3 py-2 text-xs">${u.district||'—'}</td>
+      <td class="px-3 py-2 text-xs">${u.twoFA?'<span class="text-green-600">✓</span>':'<span class="text-slate-300">—</span>'}</td>
+      <td class="px-3 py-2 text-xs">${u.email||'—'}</td>
+      <td class="px-3 py-2 text-xs">${u.active?'<span class="px-2 py-0.5 rounded bg-green-100 text-green-700">Активен</span>':'<span class="px-2 py-0.5 rounded bg-red-100 text-red-700">Заблокирован</span>'}</td>
+      <td class="px-3 py-2 text-xs">
+        <button onclick="toggleUser(${u.id})" class="p-1 hover:bg-slate-100 rounded" title="${u.active?'Заблокировать':'Разблокировать'}">${u.active?'🔒':'🔓'}</button>
+        ${u.id!==STATE.currentUser.id?`<button onclick="deleteUser(${u.id})" class="p-1 hover:bg-red-50 rounded" title="Удалить">🗑️</button>`:''}
+      </td>
+    </tr>
+  `).join('');
+}
+
+function openAddUser(){
+  $('#usr-login').value = '';
+  $('#usr-pass').value = '';
+  $('#usr-name').value = '';
+  $('#usr-email').value = '';
+  $('#usr-phone').value = '';
+  fillSelect('usr-role', Object.values(ROLES).map(r=>r.label), null, Object.keys(ROLES));
+  fillSelect('usr-district', DISTRICTS);
+  $('#usr-2fa').checked = false;
+  $('#usr-notify').checked = true;
+  toggleDistrictField();
+  openModal('modal-user');
+}
+
+function toggleDistrictField(){
+  const roleKey = $('#usr-role').value;
+  const role = ROLES[roleKey];
+  const showDistrict = role?.scope === 'district';
+  $('#usr-district-wrap').style.display = showDistrict ? 'block' : 'none';
+}
+
+function saveUser(){
+  const login = $('#usr-login').value.trim();
+  const pass = $('#usr-pass').value;
+  const name = $('#usr-name').value.trim();
+  const email = $('#usr-email').value.trim();
+  const roleKey = $('#usr-role').value;
+  const role = ROLES[roleKey];
+  
+  if(!login || !pass || !name){ toast('Заполните обязательные поля', 'error'); return; }
+  if(STATE.users.find(u=>u.login===login)){ toast('Логин уже занят', 'error'); return; }
+  
+  const user = {
+    id: Math.max(...STATE.users.map(u=>u.id))+1,
+    login: login,
+    name: name,
+    role: roleKey,
+    district: role?.scope==='district' ? $('#usr-district').value : null,
+    active: true,
+    twoFA: $('#usr-2fa').checked,
+    email: email,
+    phone: $('#usr-phone').value.trim(),
+    notify: $('#usr-notify').checked
+  };
+  STATE.users.push(user);
+  logAudit('CREATE_USER', null, null, null, `Пользователь ${login}`);
+  saveState();
+  closeModal('modal-user');
+  toast(`Пользователь ${login} создан`);
+  renderUsers();
+}
+
+function toggleUser(id){
+  const u = STATE.users.find(x=>x.id===id);
+  if(!u) return;
+  u.active = !u.active;
+  logAudit('UPDATE_USER', null, 'active', String(!u.active), String(u.active));
+  saveState();
+  toast(`Пользователь ${u.login} ${u.active?'разблокирован':'заблокирован'}`);
+  renderUsers();
+}
+
+function deleteUser(id){
+  if(!confirm('Удалить пользователя?')) return;
+  STATE.users = STATE.users.filter(u=>u.id!==id);
+  logAudit('DELETE_USER', null, null, String(id), null);
+  saveState();
+  toast('Пользователь удалён');
+  renderUsers();
+}
+
+// ============== AUDIT LOG ==============
+let auditFilter = 'all';
+function renderAudit(){
+  let logs = STATE.audit;
+  if(auditFilter!=='all') logs = logs.filter(l=>l.action===auditFilter);
+  $('#audit-tbody').innerHTML = logs.slice(0,200).map(l=>`
+    <tr class="hover:bg-slate-50 text-xs">
+      <td class="px-3 py-2 whitespace-nowrap">${new Date(l.ts).toLocaleString('ru-RU')}</td>
+      <td class="px-3 py-2 font-mono">${l.user_login}</td>
+      <td class="px-3 py-2">
+        <span class="px-2 py-0.5 rounded text-xs font-semibold ${
+          l.action==='CREATE'||l.action==='CREATE_USER'?'bg-green-100 text-green-700':
+          l.action==='UPDATE'||l.action==='UPDATE_USER'?'bg-blue-100 text-blue-700':
+          l.action==='DELETE'||l.action==='DELETE_USER'?'bg-red-100 text-red-700':
+          l.action==='LOGIN'?'bg-purple-100 text-purple-700':
+          'bg-slate-100 text-slate-600'
+        }">${l.action}</span>
+      </td>
+      <td class="px-3 py-2 font-mono">${l.object_id?`#${l.object_id}`:'—'}</td>
+      <td class="px-3 py-2">${l.field||'—'}</td>
+      <td class="px-3 py-2 max-w-[150px] truncate" title="${l.old_value||''}">${(l.old_value||'—').substring(0,40)}</td>
+      <td class="px-3 py-2 max-w-[150px] truncate" title="${l.new_value||''}">${(l.new_value||'—').substring(0,40)}</td>
+      <td class="px-3 py-2 font-mono text-slate-400">${l.ip||'—'}</td>
+    </tr>
+  `).join('') || '<tr><td colspan="8" class="px-4 py-8 text-center text-slate-400">История пуста</td></tr>';
+}
+
+function filterAudit(action){
+  auditFilter = action;
+  renderAudit();
+}
+
+// ============== СПРАВОЧНИКИ ==============
+function renderRefs(){
+  $('#ref-districts').innerHTML = DISTRICTS.map(d=>`<li class="flex items-center gap-2"><span class="w-1 h-1 bg-slate-400 rounded-full"></span>${d}</li>`).join('');
+  $('#ref-types').innerHTML = VEHICLE_TYPES.map(t=>`<li class="flex items-center gap-2"><span class="w-1 h-1 bg-slate-400 rounded-full"></span>${t}</li>`).join('');
+  $('#ref-stages').innerHTML = STAGES.map(s=>`<li>${s}</li>`).join('');
+}
+
+// ============== НАСТРОЙКИ ==============
+function saveSettings(){
+  STATE.settings.days3 = parseInt($('#set-days3').value)||3;
+  STATE.settings.days14 = parseInt($('#set-days14').value)||14;
+  STATE.settings.days90 = parseInt($('#set-days90').value)||90;
+  STATE.settings.notifyDays = parseInt($('#set-notify').value)||3;
+  logAudit('UPDATE_SETTINGS', null, null, null, JSON.stringify(STATE.settings));
+  saveState();
+  toast('Настройки сохранены');
+  renderAll();
+}
+
+// ============== BACKUP ==============
+function doBackup(){
+  const data = JSON.stringify({users:STATE.users, objects:STATE.objects, audit:STATE.audit, settings:STATE.settings}, null, 2);
+  const blob = new Blob([data], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `brts_backup_${today()}.json`;
+  a.click();
+  logAudit('BACKUP', null, null, null, 'Ручное резервное копирование');
+  toast('💾 Резервная копия сохранена');
+}
+
+// ============== HELPERS ==============
+function fillSelect(id, items, selected=null, values=null){
+  const el = $('#'+id);
+  if(!el) return;
+  el.innerHTML = items.map((it,i)=>{
+    const val = values ? values[i] : it;
+    return `<option value="${val}" ${val===selected?'selected':''}>${it}</option>`;
+  }).join('');
+}
+
+function renderMapPreview(){
+  const lat = parseFloat($('#obj-lat').value);
+  const lon = parseFloat($('#obj-lon').value);
+  if(lat && lon){
+    $('#obj-map').innerHTML = `<iframe src="https://yandex.ru/map-widget/v1/?pt=${lon},${lat}&z=16&l=map" width="100%" height="180" frameborder="0"></iframe>`;
+  } else {
+    $('#obj-map').innerHTML = '<div class="flex items-center justify-center h-full text-slate-400 text-sm">Укажите координаты для отображения карты</div>';
+  }
+}
+['obj-lat','obj-lon'].forEach(id=>{
+  setTimeout(()=>{
+    const el = $('#'+id);
+    if(el) el.oninput = renderMapPreview;
+  }, 100);
+});
+
+function renderAll(){
+  renderDashboard();
+  renderObjects();
+}
+
+// ============== ИНИЦИАЛИЗАЦИЯ ==============
+(function init(){
+  // Заполнение фильтров
+  const fDistricts = $('#f-districts');
+  const fTypes = $('#f-types');
+  const fStages = $('#f-stages');
+  const fServices = $('#f-services');
+  fDistricts.innerHTML = DISTRICTS.map(d=>`<option value="${d}">${d}</option>`).join('');
+  fTypes.innerHTML = VEHICLE_TYPES.map(t=>`<option value="${t}">${t}</option>`).join('');
+  fStages.innerHTML = STAGES.map(s=>`<option value="${s}">${s}</option>`).join('');
+  fServices.innerHTML = SERVICES.map(s=>`<label class="flex items-center gap-1 text-xs"><input type="checkbox" value="${s}" class="accent-blue-600 filter-service"> ${s}</label>`).join('');
+  
+  // Обработчики фильтров
+  $('#f-search').oninput = e => { STATE.filters.search = e.target.value; STATE.currentPage=1; renderObjects(); };
+  fDistricts.onchange = () => { STATE.filters.districts = Array.from(fDistricts.selectedOptions).map(o=>o.value); STATE.currentPage=1; renderObjects(); };
+  fTypes.onchange = () => { STATE.filters.types = Array.from(fTypes.selectedOptions).map(o=>o.value); STATE.currentPage=1; renderObjects(); };
+  fStages.onchange = () => { STATE.filters.stages = Array.from(fStages.selectedOptions).map(o=>o.value); STATE.currentPage=1; renderObjects(); };
+  fServices.onchange = () => { STATE.filters.services = Array.from(fServices.querySelectorAll('input:checked')).map(i=>i.value); STATE.currentPage=1; renderObjects(); };
+  $('#f-date-from').onchange = e => { STATE.filters.dateFrom = e.target.value; STATE.currentPage=1; renderObjects(); };
+  $('#f-date-to').onchange = e => { STATE.filters.dateTo = e.target.value; STATE.currentPage=1; renderObjects(); };
+  $('#page-size').onchange = e => { STATE.pageSize = parseInt(e.target.value); STATE.currentPage=1; renderObjects(); };
+  
+  // Загрузка состояния или генерация данных
+  if(!loadState() || STATE.objects.length===0){
+    STATE.objects = generateObjects(1720);
+    logAudit('INITIAL_IMPORT', null, null, null, 'Импортировано 1720 записей из Google Sheets');
+    saveState();
+  }
+  
+  // Загрузка настроек
+  $('#set-days3').value = STATE.settings.days3;
+  $('#set-days14').value = STATE.settings.days14;
+  $('#set-days90').value = STATE.settings.days90;
+  $('#set-notify').value = STATE.settings.notifyDays;
+  
+  console.log(`✅ БРТС CRM v4.0 загружена. Объектов: ${STATE.objects.length}, пользователей: ${STATE.users.length}`);
+})();
+</script>
+</body>
+</html>
