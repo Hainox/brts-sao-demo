@@ -516,9 +516,10 @@ function genPlate(){
   return `${rndL()}${rndN()}${rndN()}${rndN()}${rndL()}${rndL()}${region}`;
 }
 
-// Кодирование ГРЗ в UTF-8 для локального демо. Это не заменяет серверное шифрование.
-function encryptPlate(p){ return p ? 'ENC:'+btoa(Array.from(new TextEncoder().encode(p), b=>String.fromCharCode(b)).join('')) : null; }
-function decryptPlate(p){ 
+// Обратимое base64-кодирование ГРЗ для локального демо, а не шифрование: прочитать может любой.
+// Префикс ENC: и поле license_plate_encrypted оставлены ради совместимости с данными в localStorage.
+function encodePlate(p){ return p ? 'ENC:'+btoa(Array.from(new TextEncoder().encode(p), b=>String.fromCharCode(b)).join('')) : null; }
+function decodePlate(p){ 
   if(!p) return null;
   if(p.startsWith('ENC:')){ try{ return new TextDecoder().decode(Uint8Array.from(atob(p.substring(4)), c=>c.charCodeAt(0))); }catch(e){ return '***'; } }
   return p;
@@ -631,7 +632,7 @@ function generateObjects(count){
       lat: lat.toFixed(6),
       lon: lon.toFixed(6),
       brand_model_color: `${brand}, ${color}`,
-      license_plate_encrypted: encryptPlate(plate),
+      license_plate_encrypted: encodePlate(plate),
       vin: '',
       stage: stage,
       status: 'completed',
@@ -1054,7 +1055,7 @@ function renderObjects(){
   
   $('#objects-tbody').innerHTML = pageData.map(obj=>{
     const dl = calcDeadlines(obj);
-    const plate = canSeePlate ? (decryptPlate(obj.license_plate_encrypted)||'б/н') : '***';
+    const plate = canSeePlate ? (decodePlate(obj.license_plate_encrypted)||'б/н') : '***';
     const stageBadge = {
       'Выявлено':'bg-blue-100 text-blue-700',
       '1-е обследование проведено':'bg-indigo-100 text-indigo-700',
@@ -1101,7 +1102,7 @@ function applyFilters(list){
   return list.filter(obj=>{
     if(f.search){
       const q = f.search.toLowerCase();
-      const hay = [obj.case_number, obj.address, obj.brand_model_color, decryptPlate(obj.license_plate_encrypted), obj.vin, obj.owner_name].join(' ').toLowerCase();
+      const hay = [obj.case_number, obj.address, obj.brand_model_color, decodePlate(obj.license_plate_encrypted), obj.vin, obj.owner_name].join(' ').toLowerCase();
       if(!hay.includes(q)) return false;
     }
     if(f.districts.length && !f.districts.includes(obj.district)) return false;
@@ -1143,7 +1144,7 @@ function openObjectCard(id){
   const obj = STATE.objects.find(o=>o.id===id);
   if(!obj) return;
   const dl = calcDeadlines(obj);
-  const plate = decryptPlate(obj.license_plate_encrypted) || 'б/н';
+  const plate = decodePlate(obj.license_plate_encrypted) || 'б/н';
   const canEdit_ = canEdit(obj);
   
   $('#card-title').textContent = `Объект №${obj.case_number} — ${obj.brand_model_color || 'без марки'}`;
@@ -1291,7 +1292,7 @@ function editObject(id){
   $('#obj-lat').value = obj.lat || '';
   $('#obj-lon').value = obj.lon || '';
   $('#obj-car').value = obj.brand_model_color || '';
-  $('#obj-plate').value = decryptPlate(obj.license_plate_encrypted) || '';
+  $('#obj-plate').value = decodePlate(obj.license_plate_encrypted) || '';
   $('#obj-vin').value = obj.vin || '';
   $('#obj-owner-name').value = obj.owner_name || '';
   $('#obj-owner-phone').value = obj.owner_phone || '';
@@ -1332,7 +1333,7 @@ function saveObject(){
     lat: $('#obj-lat').value || null,
     lon: $('#obj-lon').value || null,
     brand_model_color: $('#obj-car').value.trim(),
-    license_plate_encrypted: encryptPlate(plate),
+    license_plate_encrypted: encodePlate(plate),
     vin: $('#obj-vin').value.trim(),
     stage: $('#obj-stage').value,
     detection_services: services,
@@ -1502,7 +1503,7 @@ const REPORT_DIMS = [
   {id:'service', label:'Служба', get:o=>(o.detection_services||[])[0]||'—'},
   {id:'year', label:'Год выявления', get:o=>o.detection_date?.slice(0,4)},
   {id:'month', label:'Месяц выявления', get:o=>o.detection_date?.slice(0,7)},
-  {id:'has_plate', label:'Есть ГРЗ', get:o=>decryptPlate(o.license_plate_encrypted)!=='б/н'?'Да':'Нет'},
+  {id:'has_plate', label:'Есть ГРЗ', get:o=>decodePlate(o.license_plate_encrypted)!=='б/н'?'Да':'Нет'},
   {id:'moved', label:'Перемещено', get:o=>o.moved_to_parking_date?'Да':'Нет'},
   {id:'in_court', label:'В суде', get:o=>(o.legal_actions||[]).length>0?'Да':'Нет'},
   {id:'has_owner', label:'Владелец установлен', get:o=>o.owner_name?'Да':'Нет'},

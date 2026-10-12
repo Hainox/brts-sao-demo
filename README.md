@@ -16,3 +16,14 @@
 3. Контрольные сроки, отчёты, роли и справочники.
 
 Публикация автоматизирована GitHub Actions через GitHub Pages.
+
+## Для разработчиков
+
+- Тесты: `node --test tests/*.test.mjs` (Node 24, без `package.json`).
+- `styles.css` — сгенерированный файл. После изменения классов в `index.html` пересоберите его:
+
+  ```bash
+  npx tailwindcss@3.4.17 -c tailwind.config.cjs -i tailwind-input.css -o styles.css --minify
+  ```
+
+  Команда воспроизводит текущий `styles.css` байт в байт; новые классы без пересборки не появятся.
